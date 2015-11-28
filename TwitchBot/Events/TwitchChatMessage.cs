@@ -1,0 +1,220 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace TwitchBot.Events
+{
+    /// <summary>
+    /// Message class for defining IRC message attributes
+    /// IRC message format: :<user>!<user>@<user>.tmi.twitch.tv PRIVMSG #<channel> :<chat>
+    /// </summary>
+    class TwitchChatMessage : TwitchChatEvent
+    {
+        #region Member Variables
+        private string user;                        // Username of the user that created the message
+        private string channel;                     // Channel that the message was received from 
+        private string chatMessage;                 // Twitch chat portion of message
+
+        private string userColor;                   // Color of the user as a hexadecimal
+        private string displayname;                 // Display name of the user including capitalization
+        private string emotes;                      // Emotes that used in the message
+        private bool userIsSubscriber;              // Is the user a subscriber to this channel?
+        private bool userHasTurbo;                  // Does the user have Twitch turbo?
+        private long userId;                        // User ID number of the user
+        private string userType;                    // Type of the user (mod, global-mod, admin, staff)
+        private bool userIsBroadcaster;             // Is the user the broadcaster in this channel?
+        private bool userIsModerator;               // Is the user a moderator in this chhanel (or higher)?
+        #endregion
+
+        #region Constructor
+        public TwitchChatMessage(string ircString)
+        {
+            // Set main attributes of chat message
+            this.user = ParseUser(ircString);
+            this.channel = ParseChannel(ircString);
+            this.chatMessage = ParseMessage(ircString);
+
+            // Set metatag attributes of chat message
+            List<string> metatags = GetMetatags(ircString);
+            userColor = ParseUserColor(metatags);
+            displayname = ParseDisplayName(metatags);
+            emotes = ParseEmotes(metatags);
+            userIsSubscriber = ParseIsSubscriber(metatags);
+            userHasTurbo = ParseHasTurbo(metatags);
+            userId = ParseUserId(metatags);
+            userType = ParseUserType(metatags);
+            userIsBroadcaster = ParseIsBroadcaster(metatags);
+            userIsModerator = ParseIsModerator(userType);
+        }
+        #endregion
+
+        #region Methods
+        /// <summary>
+        /// Parses the channel name that the chat message originated from
+        /// </summary>
+        /// <param name="ircString">The full IRC string</param>
+        /// <returns></returns>
+        internal static string ParseChannel(string ircString)
+        {
+            string channel = ircString;
+            int startIndex = channel.IndexOf('#');
+            int endIndex = ircString.Length;
+            int length = endIndex - startIndex - 1;
+            channel = channel.Substring(startIndex + 1, length);                                                // Keep substring between first '#' to the end of the message
+            endIndex = channel.IndexOf(' ');
+            channel = channel.Substring(0, endIndex);                                                           // Keep substring between the start of the string and the first ' '
+            return channel;
+        }
+
+        /// <summary>
+        /// Parse the subscriber status of the user
+        /// </summary>
+        /// <param name="metatags">Complete list of metatags</param>
+        /// <returns></returns>
+        internal bool ParseIsSubscriber(List<string> metatags)
+        {
+            string subscriberData = FindMetatagData(metatags, "subscriber=");
+            if (subscriberData.Equals("1")) { return true; }
+            else return false;
+        }
+
+        /// <summary>
+        /// Parse the broadcaster status of the user
+        /// </summary>
+        /// <param name="metatags">Complete list of metatags</param>
+        /// <returns></returns>
+        internal bool ParseIsBroadcaster(List<string> metatags)
+        {
+            if (this.User.Equals(this.Channel)) { return true; }
+            else return false;
+        }
+
+        /// <summary>
+        /// Parse the moderator status of the user
+        /// </summary>
+        /// <param name="metatags">Complete list of metatags</param>
+        /// <returns></returns>
+        internal bool ParseIsModerator(string userType)
+        {
+            if (this.userType.Equals("mod") ||
+                this.userType.Equals("global-mod") ||
+                this.userType.Equals("admin") ||
+                this.userType.Equals("staff") ||
+                this.UserIsBroadcaster)
+            { return true; }
+            else return false;
+        }
+
+        /// <summary>
+        /// Override  ToString() method
+        /// </summary>
+        /// <returns></returns>
+        public override string ToString()
+        {
+            return "[" + channel + "] " + user + ": " + chatMessage;
+        }
+        #endregion
+
+        #region Getters
+        public string ChatMessage
+        {
+            get
+            {
+                return chatMessage;
+            }
+        }
+
+        internal string User
+        {
+            get
+            {
+                return user;
+            }
+        }
+
+        internal string Channel
+        {
+            get
+            {
+                return channel;
+            }
+        }
+
+        public string UserColor
+        {
+            get
+            {
+                return userColor;
+            }
+        }
+
+        public string Displayname
+        {
+            get
+            {
+                return displayname;
+            }
+        }
+
+        public string Emotes
+        {
+            get
+            {
+                return emotes;
+            }
+        }
+
+        public bool UserIsSubscriber
+        {
+            get
+            {
+                return userIsSubscriber;
+            }
+        }
+
+        public bool UserHasTurbo
+        {
+            get
+            {
+                return userHasTurbo;
+            }
+        }
+
+        public long UserId
+        {
+            get
+            {
+                return userId;
+            }
+        }
+
+        public string UserType
+        {
+            get
+            {
+                return userType;
+            }
+            
+        }
+
+        public bool UserIsBroadcaster
+        {
+            get
+            {
+                return userIsBroadcaster;
+            }
+        }
+
+        public bool UserIsModerator
+        {
+            get
+            {
+                return userIsModerator;
+            }
+        }
+        #endregion
+
+    }
+}
