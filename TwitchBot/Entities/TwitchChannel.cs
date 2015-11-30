@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace TwitchBot
+namespace TwitchBot.Entities
 {
     class TwitchChannel
     {
@@ -19,17 +19,17 @@ namespace TwitchBot
         }
         #endregion
 
+        public override string ToString()
+        {
+            return this.ChannelName;
+        }
+
         #region Getters
         public string ChannelName
         {
             get
             {
                 return channelName;
-            }
-
-            set
-            {
-                channelName = value;
             }
         } 
         #endregion

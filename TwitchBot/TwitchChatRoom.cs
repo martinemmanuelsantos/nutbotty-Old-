@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
+using TwitchBot.Entities;
 using TwitchBot.Events;
 
 namespace TwitchBot
@@ -90,6 +91,14 @@ namespace TwitchBot
                     SendChatMessage("@" + chatData.User + ": " + uptime);
                     SendWhisper(chatData.User, uptime);
                     Log.Message(chatData.User + " checked the uptime for #" + chatData.Channel + ": " + uptime, true);
+                }
+
+                if (chatData.ChatMessage.Equals("!join") && chatData.Channel.Equals(TwitchChatBot.BOTNAME))
+                {
+                    TwitchChannel channel = new TwitchChannel(chatData.User);
+                    TwitchChatBotDB.AddChannel(channel);
+                    Log.Message(chatData.User + " has requested to " + TwitchChatBot.BOTNAME, true);
+                    new TwitchChatRoom(chatConnection, whisperConnection, channel);
                 }
             }
 

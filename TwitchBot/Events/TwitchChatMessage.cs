@@ -59,8 +59,10 @@ namespace TwitchBot.Events
         internal static string ParseChannel(string ircString)
         {
             string channel = ircString;
-            int startIndex = channel.IndexOf('#');
-            int endIndex = ircString.Length;
+            int startIndex = channel.IndexOf(' ');
+            channel = channel.Substring(startIndex);
+            startIndex = channel.IndexOf('#');
+            int endIndex = channel.Length;
             int length = endIndex - startIndex - 1;
             channel = channel.Substring(startIndex + 1, length);                                                // Keep substring between first '#' to the end of the message
             endIndex = channel.IndexOf(' ');
