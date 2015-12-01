@@ -89,17 +89,37 @@ namespace TwitchBot
                 {
                     string uptime = GetUptime(chatData.Channel);
                     SendChatMessage("@" + chatData.User + ": " + uptime);
-                    SendWhisper(chatData.User, uptime);
                     Log.Message(chatData.User + " checked the uptime for #" + chatData.Channel + ": " + uptime, true);
                 }
 
                 if (chatData.ChatMessage.Equals("!join") && chatData.Channel.Equals(TwitchChatBot.BOTNAME))
                 {
-                    TwitchChannel channel = new TwitchChannel(chatData.User);
-                    TwitchChatBotDB.AddChannel(channel);
-                    Log.Message(chatData.User + " has requested to " + TwitchChatBot.BOTNAME, true);
-                    new TwitchChatRoom(chatConnection, whisperConnection, channel);
+                    Log.Message(chatData.User + " requested " + TwitchChatBot.BOTNAME + " to join their channel.", true);
+                    if (!TwitchChatBotDB.ChannelExists(chatData.User))
+                    {
+                        TwitchChannel channel = new TwitchChannel(chatData.User);
+                        TwitchChatBotDB.AddChannel(channel);
+                        new TwitchChatRoom(chatConnection, whisperConnection, channel);
+                        SendChatMessage(TwitchChatBot.BOTNAME + " is now available for " + chatData.User + ". Type !commands for a list of commands you can use.");
+                    } else
+                    {
+                        SendChatMessage(TwitchChatBot.BOTNAME + " is already available for " + chatData.User + ".");
+                    }
                 }
+
+                if (chatData.ChatMessage.Equals("!part") && chatData.Channel.Equals(TwitchChatBot.BOTNAME))
+                {
+                    Log.Message(chatData.User + "requested " + TwitchChatBot.BOTNAME + " to part their channel.", true);
+                    if (TwitchChatBotDB.ChannelExists(chatData.User)) {
+                        TwitchChatBotDB.RemoveChannel(chatData.User);
+                        chatConnection.part(chatData.User);
+                        SendChatMessage("@" + chatData.User + ", thank you for using " + TwitchChatBot.BOTNAME + ".Type !join if you ever want to use " + TwitchChatBot.BOTNAME + " again.");
+                    } else
+                    {
+                        SendChatMessage(TwitchChatBot.BOTNAME + " is not in #" + chatData.User + ".");
+                    }
+                }
+
             }
 
             // Logic for responding to an unknown event

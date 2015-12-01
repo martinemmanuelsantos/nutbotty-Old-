@@ -6,6 +6,7 @@ using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using TwitchBot.Entities;
 using TwitchBot.Events;
 
 namespace TwitchBot
@@ -47,7 +48,12 @@ namespace TwitchBot
             ircClient.joinChannel(channel.Channel.ChannelName);
             chatrooms.AddLast(channel);
         }
-        
+
+        internal void part(string channel)
+        {
+            ircClient.partChannel(channel);
+        }
+
         /// <summary>
         /// Continually check for messages from the IRC input stream, and respond according to the event typpe
         /// </summary>

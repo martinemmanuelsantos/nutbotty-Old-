@@ -14,7 +14,7 @@ namespace TwitchBot.Events
     {
         #region Member Variables
         private string user;                        // Username of the user that created the message
-        private string channel;                     // Channel that the message was received from 
+        private string channelName;                     // Channel that the message was received from 
         private string chatMessage;                 // Twitch chat portion of message
 
         private string userColor;                   // Color of the user as a hexadecimal
@@ -33,7 +33,7 @@ namespace TwitchBot.Events
         {
             // Set main attributes of chat message
             this.user = ParseUser(ircString);
-            this.channel = ParseChannel(ircString);
+            this.channelName = ParseChannel(ircString);
             this.chatMessage = ParseMessage(ircString);
 
             // Set metatag attributes of chat message
@@ -115,7 +115,7 @@ namespace TwitchBot.Events
         /// <returns></returns>
         public override string ToString()
         {
-            return "[" + channel + "] " + user + ": " + chatMessage;
+            return "[" + channelName + "] " + user + ": " + chatMessage;
         }
         #endregion
 
@@ -140,7 +140,7 @@ namespace TwitchBot.Events
         {
             get
             {
-                return channel;
+                return channelName;
             }
         }
 

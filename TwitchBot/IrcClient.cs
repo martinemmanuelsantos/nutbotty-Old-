@@ -84,16 +84,26 @@ namespace TwitchBot
 
         }
 
-
         /// <summary>
         /// Join a given channel
         /// </summary>
-        /// <param name="channel"></param>
+        /// <param name="channel">The channel to join</param>
         public void joinChannel(string channel)
         {
             outputStream.WriteLine("JOIN #" + channel);
             outputStream.Flush();
             Log.Message("Joined #" + channel, true);
+        }
+
+        /// <summary>
+        /// Join a given channel
+        /// </summary>
+        /// <param name="channel"></param>
+        public void partChannel(string channel)
+        {
+            outputStream.WriteLine("PART #" + channel);
+            outputStream.Flush();
+            Log.Message("Parted #" + channel, true);
         }
 
         /// <summary>
