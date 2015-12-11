@@ -141,6 +141,18 @@ namespace TwitchBot
         }
 
         /// <summary>
+        /// Method for sending pre-formatted Twitch chat messages (with /me string)
+        /// </summary>
+        /// <param name="channel">Channel to send chat message</param>
+        /// <param name="message">Chat message</param>
+        public void sendChatMessageNoAction(string channel, string message)
+        {
+            sendIrcString(":" + username + "!" + username + "@" + username + ".tmi.twitch.tv PRIVMSG #" + channel + " : " + message);
+            outputStream.Flush();
+            Log.Message(message, false);
+        }
+
+        /// <summary>
         /// Mehod for sending pre-formatted whisper message
         /// </summary>
         /// <param name="user"></param>

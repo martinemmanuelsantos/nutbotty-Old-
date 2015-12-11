@@ -6,16 +6,18 @@ using System.Threading.Tasks;
 
 namespace TwitchBot.Events
 {
-    class TwitchChatPing : TwitchChatEvent
+    class UnknownEvent : Event
     {
-        public TwitchChatPing()
-        {
+        string message;
 
+        public UnknownEvent(string ircString)
+        {
+            this.message = ircString;
         }
 
         public override string ToString()
         {
-            return "Sent PONG";
+            return "Unknown Chat Event: " + message;
         }
     }
 }

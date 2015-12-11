@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace TwitchBot.Events
 {
-    class TwitchChatWhisper : TwitchChatEvent
+    class WhisperEvent : Event
     {
         #region Member Variables
         private string user;                        // Username of the user that created the message
@@ -22,7 +22,7 @@ namespace TwitchBot.Events
         #endregion
 
         #region Constructors
-        public TwitchChatWhisper(string ircString)
+        public WhisperEvent(string ircString)
         {
             // Set main attributes of whisper
             this.chatMessage = ParseMessage(ircString);

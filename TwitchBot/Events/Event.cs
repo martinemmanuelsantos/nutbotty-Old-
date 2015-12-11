@@ -8,10 +8,10 @@ using TwitchBot.Events;
 
 namespace TwitchBot.Events
 {
-    public abstract class TwitchChatEvent
+    public abstract class Event
     {
 
-        internal static TwitchChatEvent parseEvent(string ircString)
+        internal static Event parseEvent(string ircString)
         {
             #region Event Regular Expressions
             // PING
@@ -30,11 +30,11 @@ namespace TwitchBot.Events
             #endregion
 
             // Check what the event type is, then pass the relevant instance
-            if (pingRgx.IsMatch(ircString)) { return new TwitchChatPing(); }
-            else if (chatRgx.IsMatch(ircString)) { return new TwitchChatMessage(ircString); }
-            else if (whisperRgx.IsMatch(ircString)) { return new TwitchChatWhisper(ircString); }
-            else if (hostRgx.IsMatch(ircString)) { return new TwitchChatHost(ircString); }
-            else { return new TwitchChatUnknownEvent(ircString); }
+            if (pingRgx.IsMatch(ircString)) { return new PingEvent(); }
+            else if (chatRgx.IsMatch(ircString)) { return new ChatEvent(ircString); }
+            else if (whisperRgx.IsMatch(ircString)) { return new WhisperEvent(ircString); }
+            else if (hostRgx.IsMatch(ircString)) { return new HostEvent(ircString); }
+            else { return new UnknownEvent(ircString); }
         }
 
         /// <summary>
@@ -45,10 +45,17 @@ namespace TwitchBot.Events
         internal static string ParseMessage(string ircString)
         {
             string message = ircString;                                                                         // Begin with the IRC message
-            int startIndex = message.LastIndexOf(':');
+            int startIndex = message.IndexOf(' ');
+            message = message.Substring(startIndex);
+            startIndex = message.IndexOf('#');
+            message = message.Substring(startIndex);
+            startIndex = message.IndexOf(':');
             message = message.Substring(startIndex + 1);                                                        // Remove everything at and before the last ':'
-            message = Regex.Replace(message, "[^!@#$%^&*()a-zA-Z0-9_. ]+", "", RegexOptions.Compiled);
-            if (message.StartsWith("ACTION ")) { message = message.Remove(0, "ACTION ".Length); }               // If the chat message is an ACTION message, remove "ACTION " text
+            // If the chat message is an ACTION message, remove "ACTION " text
+            if (message.StartsWith("\x01" + "ACTION ")) {
+                message = Regex.Replace(message, "\x01", "", RegexOptions.Compiled);
+                message = message.Remove(0, "ACTION ".Length);
+            }
             return message;
         }
 
@@ -60,7 +67,9 @@ namespace TwitchBot.Events
         internal static string ParseUser(string ircString)
         {
             string user = ircString;                                                                            // Begin with the IRC message
-            int startIndex = user.IndexOf(':');
+            int startIndex = user.IndexOf(' ');
+            user = user.Substring(startIndex);
+            startIndex = user.IndexOf(':');
             int endIndex = user.IndexOf('!');
             int length = endIndex - startIndex - 1;
             user = user.Substring(startIndex + 1, length);                                                      // Keep substring between first ':' and first '!'

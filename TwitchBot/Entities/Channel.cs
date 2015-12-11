@@ -6,14 +6,14 @@ using System.Threading.Tasks;
 
 namespace TwitchBot.Entities
 {
-    class TwitchChannel
+    class Channel
     {
         #region Member Variables
         string channelName;
         #endregion
 
         #region Constructors
-        public TwitchChannel(string channelName)
+        public Channel(string channelName)
         {
             this.channelName = channelName;
         }

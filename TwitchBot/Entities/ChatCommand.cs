@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace TwitchBot.Entities
 {
-    class TwitchChatCommand
+    class ChatCommand
     {
         #region Member Variables
         string triggerText;

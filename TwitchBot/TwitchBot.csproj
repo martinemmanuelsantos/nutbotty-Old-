@@ -48,9 +48,17 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Newtonsoft.Json, Version=7.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.7.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Drawing" />
+    <Reference Include="System.Json, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Json.4.0.20126.16343\lib\net40\System.Json.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -60,10 +68,13 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Entities\TwitchChatCommand.cs" />
-    <Compile Include="Events\TwitchChatHost.cs" />
+    <Compile Include="Entities\ChatCommand.cs" />
+    <Compile Include="Entities\Quote.cs" />
+    <Compile Include="Events\HostEvent.cs" />
     <Compile Include="Log.cs" />
     <Compile Include="IrcClient.cs" />
+    <Compile Include="Parsers\StrawpollParser.cs" />
+    <Compile Include="Parsers\YouTubeParser.cs" />
     <Compile Include="Properties\Settings.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
@@ -74,20 +85,21 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>TwitchBotDBDataSet.xsd</DependentUpon>
     </Compile>
-    <Compile Include="Entities\TwitchChannel.cs" />
-    <Compile Include="TwitchChatBotDB.cs" />
+    <Compile Include="Entities\Channel.cs" />
+    <Compile Include="Database.cs" />
     <Compile Include="TwitchChatConnection.cs" />
     <Compile Include="TwitchChatRoom.cs" />
-    <Compile Include="Events\TwitchChatEvent.cs" />
-    <Compile Include="Events\TwitchChatMessage.cs" />
-    <Compile Include="TwitchChatBot.cs" />
+    <Compile Include="Events\Event.cs" />
+    <Compile Include="Events\ChatEvent.cs" />
+    <Compile Include="Nutbotty.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Events\TwitchChatPing.cs" />
-    <Compile Include="Events\TwitchChatUnknownEvent.cs" />
-    <Compile Include="Events\TwitchChatWhisper.cs" />
+    <Compile Include="Events\PingEvent.cs" />
+    <Compile Include="Events\UnknownEvent.cs" />
+    <Compile Include="Events\WhisperEvent.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+    <None Include="packages.config" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
@@ -117,12 +129,12 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="TwitchChatBotDB.mdf">
+    <Content Include="NutbottyDB.mdf">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="TwitchChatBotDB_log.ldf">
+    <Content Include="NutbottyDB_log.ldf">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      <DependentUpon>TwitchChatBotDB.mdf</DependentUpon>
+      <DependentUpon>NutbottyDB.mdf</DependentUpon>
     </Content>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

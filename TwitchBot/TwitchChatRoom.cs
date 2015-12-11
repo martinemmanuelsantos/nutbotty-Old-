@@ -1,12 +1,16 @@
-﻿using System;
+﻿using Newtonsoft.Json.Linq;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Json;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using TwitchBot.Entities;
 using TwitchBot.Events;
+using TwitchBot.Parsers;
 
 namespace TwitchBot
 {
@@ -16,11 +20,12 @@ namespace TwitchBot
         #region Member Variables
         TwitchChatConnection chatConnection;
         TwitchChatConnection whisperConnection;
-        TwitchChannel channel; 
+        Channel channel;
+        Random RNG = new Random();
         #endregion
 
         #region Constructors
-        public TwitchChatRoom(TwitchChatConnection chatConnection, TwitchChatConnection whisperConnection, TwitchChannel channel)
+        public TwitchChatRoom(TwitchChatConnection chatConnection, TwitchChatConnection whisperConnection, Channel channel)
         {
             this.chatConnection = chatConnection;
             this.whisperConnection = whisperConnection;
@@ -47,7 +52,7 @@ namespace TwitchBot
             }
         }
 
-        internal TwitchChannel Channel
+        internal Channel Channel
         {
             get
             {
@@ -56,69 +61,211 @@ namespace TwitchBot
         } 
         #endregion
 
-        internal void RespondToEvent(TwitchChatEvent chatEvent)
+        internal void RespondToEvent(Event chatEvent)
         {
             #region Bot Logic
             // Logic for responding to a "PRIVMSG" event
-            if (chatEvent.GetType().Equals(typeof(TwitchChatMessage)))
+            if (chatEvent.GetType().Equals(typeof(ChatEvent)))
             {
                 // Create a reference for the chat data
-                TwitchChatMessage chatData = (TwitchChatMessage)(chatEvent);
+                ChatEvent chatData = (ChatEvent)(chatEvent);
+                string message = chatData.ChatMessage;
+                string user = chatData.User;
+                string channelName = chatData.Channel;
 
-                if (chatData.ChatMessage.Equals("!discord")) {
-                    if (chatData.UserIsSubscriber && chatData.Channel.Equals("oatsngoats"))
-                        SendWhisper(chatData.User, "Thanks for subscribing to " + chatData.Channel + ". Please feel free to join the subscriber Discord channel: https://discord.gg/0f4ukPJq31KmhHcZ");
+                #region JOIN and PART commands
+                if (message.Equals("!join") && channelName.Equals(Nutbotty.BOTNAME))
+                {
+                    Log.Message(user + " requested " + Nutbotty.BOTNAME + " to join their channel.", true);
+                    if (!Database.ChannelExists(user))
+                    {
+                        Channel channel = new Channel(user);
+                        Database.AddChannel(channel);
+                        new TwitchChatRoom(chatConnection, whisperConnection, channel);
+                        SendChatMessage(Nutbotty.BOTNAME + " is now available for " + user + ". Type !commands for a list of commands you can use.");
+                    }
                     else
-                        SendWhisper(chatData.User, "You are not subscribed to " + chatData.Channel + ".");
+                    {
+                        SendChatMessage(Nutbotty.BOTNAME + " is already available for " + user + ".");
+                    }
                 }
 
-                if (chatData.ChatMessage.Equals("!commands")) { SendChatMessage("Click here for a list of my commands: http://bombch.us/BRtQ"); }
-                if (chatData.ChatMessage.Equals("!playlist")) { SendChatMessage("Click here for the BEST playlist ever: http://bombch.us/Bm5w"); }
-                if (chatData.ChatMessage.Equals("!hitbox")) { SendChatMessage("Watch me on Hitbox for minimal delay: www.hitbox.tv/nutella4eva"); }
-                if (chatData.ChatMessage.Equals("!youtube")) { SendChatMessage("Watch me on YouTube Gaming for quality options: gaming.youtube.com/hamtotem/live"); }
-                if (chatData.ChatMessage.Equals("!joicaster")) { SendChatMessage("Try out all my streams www.twitch.tv/nutella4eva www.hitbox.tv/nutella4eva gaming.youtube.com/hamtotem/live"); }
-                if (chatData.ChatMessage.Equals("!emotes")) { SendChatMessage("Click here to see list of FrankerFaceZ emotes for " + chatData.Channel + ": www.frankerfacez.com/" + chatData.Channel); }
-                if (chatData.ChatMessage.Equals("!ffz")) { SendChatMessage("Install the FrankerFaceZ plugin to use custom emotes: www.frankerfacez.com"); }
-                if (chatData.ChatMessage.Equals("!foosdaraid")) { SendChatMessage("Foosda Raid ( ͡° ͜ʖ ͡°)"); }
+                if (message.Equals("!part") && channelName.Equals(Nutbotty.BOTNAME))
+                {
+                    Log.Message(user + " requested " + Nutbotty.BOTNAME + " to part their channel.", true);
+                    if (Database.ChannelExists(user))
+                    {
+                        Database.RemoveChannel(user);
+                        chatConnection.part(user);
+                        SendChatMessage("@" + user + ", thank you for using " + Nutbotty.BOTNAME + ".Type !join if you ever want to use " + Nutbotty.BOTNAME + " again.");
+                    }
+                    else
+                    {
+                        SendChatMessage(Nutbotty.BOTNAME + " is not in #" + user + ".");
+                    }
+                } 
+                #endregion
 
-                if (chatData.ChatMessage.Contains("ResidentSleeper")) { SendChatMessage("ResidentSleeper ResidentSleeper ResidentSleeper ResidentSleeper ResidentSleeper"); }
+                #region Generic Commands
+                // TO-DO: Support the following variables for commands: $channel $user $uptime 
+                if (message.Equals("!discord") && channelName.Equals("oatsngoats"))
+                {
+                    if (chatData.UserIsSubscriber)
+                        SendWhisper(user, "Thanks for subscribing to " + chatData.Channel + ". Please feel free to join the subscriber Discord channel: https://discord.gg/0f4ukPJq31KmhHcZ");
+                    else
+                        SendWhisper(user, "You are not subscribed to " + chatData.Channel + ".");
+                }
+                
+                if (message.Contains(Nutbotty.BOTNAME) && message.Contains("how many points") && channelName.Equals("oatsngoats"))
+                {
+                    SendChatMessageNoAction("!points");
+                }
 
+                if (message.Equals("!commands")) { SendChatMessage("Click here for a list of my commands: http://bombch.us/BRtQ"); }
+                if (message.Equals("!playlist")) { SendChatMessage("Click here for the BEST playlist ever: http://bombch.us/Bm5w"); }
+                if (message.Equals("!hitbox")) { SendChatMessage("Watch me on Hitbox for minimal delay: www.hitbox.tv/nutella4eva"); }
+                if (message.Equals("!youtube")) { SendChatMessage("Watch me on YouTube Gaming for quality options: gaming.youtube.com/hamtotem/live"); }
+                if (message.Equals("!joicaster")) { SendChatMessage("Try out all my streams www.twitch.tv/nutella4eva www.hitbox.tv/nutella4eva gaming.youtube.com/hamtotem/live"); }
+                if (message.Equals("!emotes")) { SendChatMessage("Click here to see list of FrankerFaceZ emotes for " + chatData.Channel + ": www.frankerfacez.com/" + chatData.Channel); }
+                if (message.Equals("!ffz")) { SendChatMessage("Install the FrankerFaceZ plugin to use custom emotes: www.frankerfacez.com"); }
+                if (message.Equals("!foosdaraid")) { SendChatMessage("Foosda Raid ( ͡° ͜ʖ ͡°)"); }
+                if (message.Equals("!sohawt")) { SendChatMessage("http://i.imgur.com/wp5vWsl.png"); }
 
                 // Show the uptime for the stream. Information is pulled from DecAPI API by Alex Thomassen
-                if (chatData.ChatMessage.Equals("!uptime"))
+                if (message.Equals("!uptime"))
                 {
                     string uptime = GetUptime(chatData.Channel);
-                    SendChatMessage("@" + chatData.User + ": " + uptime);
-                    Log.Message(chatData.User + " checked the uptime for #" + chatData.Channel + ": " + uptime, true);
+                    SendChatMessage("@" + user + ": " + uptime);
+                    Log.Message(user + " checked the uptime for #" + chatData.Channel + ": " + uptime, true);
+                }
+                #endregion
+
+                #region QUOTE Commands
+                // Pull a random quote from the QUOTES table
+                if (message.Equals("!quote"))
+                {
+                    int randomId = RNG.Next(0, Nutbotty.quotes.Count);
+                    SendChatMessage("[" + randomId + "] " + Nutbotty.quotes[randomId].QuoteText);
+                    Console.WriteLine(randomId + " " + Nutbotty.quotes.Count);
                 }
 
-                if (chatData.ChatMessage.Equals("!join") && chatData.Channel.Equals(TwitchChatBot.BOTNAME))
+                // Add a quote to the QUOTE table
+                if (message.StartsWith("!addquote"))
                 {
-                    Log.Message(chatData.User + " requested " + TwitchChatBot.BOTNAME + " to join their channel.", true);
-                    if (!TwitchChatBotDB.ChannelExists(chatData.User))
-                    {
-                        TwitchChannel channel = new TwitchChannel(chatData.User);
-                        TwitchChatBotDB.AddChannel(channel);
-                        new TwitchChatRoom(chatConnection, whisperConnection, channel);
-                        SendChatMessage(TwitchChatBot.BOTNAME + " is now available for " + chatData.User + ". Type !commands for a list of commands you can use.");
+                    // Parse the quote text data
+                    string quoteText = message.Substring("!addquote ".Length);
+                    Quote quote = new Quote(quoteText, channelName, user, DateTime.Now);
+                    
+                    // If the user is a moderator, add the quote to the database, else do nothing
+                    if (chatData.UserIsModerator) {
+                        // Assume the command has no arguments
+                        bool hasArgs = false;
+                        // Split the command on space characters
+                        string[] args = message.Split(' ');
+                        // If there is at least one argument, continue, otherwise end if
+                        if (args.Length > 1) { hasArgs = true; }
+                        else { Log.Message("<" + channelName + "> " + user + " attempted to add quote, but there was not enough arguments.", true); }
+                        // Add quote to database if there were arguments
+                        if (hasArgs)
+                        {
+                            Database.AddQuote(quote);
+                            Nutbotty.quotes.Add(quote);
+                            SendChatMessage(user + " added quote [" + Nutbotty.quotes.Count + "]: " + quoteText);
+                            Log.Message("<" + channelName + "> " + user + " added quote: " + quoteText, true);
+                        }
                     } else
                     {
-                        SendChatMessage(TwitchChatBot.BOTNAME + " is already available for " + chatData.User + ".");
+                        SendWhisper(user, "!addquote it only available to moderators");
+                        Log.Message(user + " attempted to add a quote but is not a moderator --> " + quoteText, true);
                     }
                 }
 
-                if (chatData.ChatMessage.Equals("!part") && chatData.Channel.Equals(TwitchChatBot.BOTNAME))
+                // Delete a quote to the QUOTE table by searching the QuoteText column
+                if (message.StartsWith("!delquote"))
                 {
-                    Log.Message(chatData.User + "requested " + TwitchChatBot.BOTNAME + " to part their channel.", true);
-                    if (TwitchChatBotDB.ChannelExists(chatData.User)) {
-                        TwitchChatBotDB.RemoveChannel(chatData.User);
-                        chatConnection.part(chatData.User);
-                        SendChatMessage("@" + chatData.User + ", thank you for using " + TwitchChatBot.BOTNAME + ".Type !join if you ever want to use " + TwitchChatBot.BOTNAME + " again.");
-                    } else
+                    // Parse the quote text data
+                    string quoteText = message.Substring("!delquote ".Length);
+
+                    // If the user is a moderator, add the quote to the database, else do nothing
+                    if (chatData.UserIsModerator)
                     {
-                        SendChatMessage(TwitchChatBot.BOTNAME + " is not in #" + chatData.User + ".");
+                        // Assume the command has no arguments
+                        bool hasArgs = false;
+                        // Split the command on space characters
+                        string[] args = message.Split(' ');
+                        // If there is at least one argument, continue, otherwise end if
+                        if (args.Length > 1) { hasArgs = true; }
+                        else { Log.Message("<" + channelName + "> " + user + " attempted to delete a quote, but there was not enough arguments.", true); }
+                        // Add quote to database if there were arguments
+                        if (hasArgs)
+                        {
+                            Database.DeleteQuote(quoteText);
+                            for (int i = 0; i < Nutbotty.quotes.Count; i++)
+                            {
+                                if (Nutbotty.quotes[i].QuoteText.Equals(quoteText))
+                                {
+                                    Nutbotty.quotes.RemoveAt(i);
+                                    SendChatMessage(user + " deleted quote [" + i + "]: " + quoteText);
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        SendWhisper(user, "!addquote it only available to moderators");
+                        Log.Message(user + " attempted to add a quote but is not a moderator --> " + quoteText, true);
                     }
                 }
+                #endregion
+
+                #region CERESBOT Guesser
+                if (message.Contains(@"Round Started. Type !guess") && user.Equals("ceresbot"))
+                {
+                    int seed = RNG.Next(100);
+
+                    // 30% chance of 45 seconds | 65% chance of 46 seconds | 5% chance of 47 seconds
+                    int seconds;
+                    if (seed < 30) { seconds = 45; }
+                    else if (seed < 95) { seconds = 46; }
+                    else { seconds = 47; }
+
+                    // if 45-46 seconds, milliseconds between 0-99, else between 0-25
+                    int milliseconds;
+                    if (seconds < 47) { milliseconds = RNG.Next(100); }
+                    else { milliseconds = RNG.Next(25); }
+
+                    // Make the guess
+                    SendChatMessageNoAction("!guess " + seconds + "\"" + milliseconds.ToString("00"));
+                }
+                #endregion
+
+                #region STRAWPOLL Parser
+                if (message.Contains("strawpoll.me/"))
+                {
+                    if (StrawpollParser.GetStrawpollInfo(message) == null)
+                    {
+                        SendChatMessage(user + ", that is not a valid Strawpoll");
+                    }
+                    else
+                    {
+                        SendChatMessage(user + " pasted a Strawpoll ➤ " + StrawpollParser.GetStrawpollInfo(message));
+                    }
+                }
+                #endregion
+
+                #region YOUTUBE Parser
+                if (message.Contains("youtube.com/") || message.Contains("youtu.be/"))
+                {
+                    if (YouTubeParser.GetYouTubeVideoID(message) != null)
+                    {
+                        SendChatMessage(user + " pasted a YouTube video ➤ " + YouTubeParser.GetYouTubeInfo(message, YouTubeParser.IS_VIDEO));
+                    }
+                    if (YouTubeParser.GetYouTubePlaylistID(message) != null)
+                    {
+                        SendChatMessage(user + " pasted a YouTube playlist ➤ " + YouTubeParser.GetYouTubeInfo(message, YouTubeParser.IS_PLAYLIST));
+                    }
+                }
+                #endregion
 
             }
 
@@ -138,6 +285,16 @@ namespace TwitchBot
         internal void SendChatMessage(string message)
         {
             this.chatConnection.IrcClient.sendChatMessage(this.channel.ChannelName, message);
+            Log.Message("<" + this.channel.ChannelName + "> " + message, true);
+        }
+        /// <summary>
+        /// Send a chat message to the chat room
+        /// </summary>
+        /// <param name="message">Message to send to the chat room</param>
+        internal void SendChatMessageNoAction(string message)
+        {
+            this.chatConnection.IrcClient.sendChatMessageNoAction(this.channel.ChannelName, message);
+            Log.Message("<" + this.channel.ChannelName + "> " + message, true);
         }
 
         /// <summary>
@@ -151,13 +308,13 @@ namespace TwitchBot
         }
 
 
-    /// <summary>
-    /// Show the uptime for the stream. Information is pulled from DecAPI.me API by Alex Thomassen
-    /// </summary>
-    /// <param name="channel">The channel to check</param>
-    /// <param name="irc">IRC client</param>
-    /// <param name="user">User that is requesting the uptime</param>
-    internal string GetUptime(string channel)
+        /// <summary>
+        /// Show the uptime for the stream. Information is pulled from DecAPI.me API by Alex Thomassen
+        /// </summary>
+        /// <param name="channel">The channel to check</param>
+        /// <param name="irc">IRC client</param>
+        /// <param name="user">User that is requesting the uptime</param>
+        internal string GetUptime(string channel)
         {
             string urlData = String.Empty;
             WebClient wc = new WebClient();
@@ -165,18 +322,6 @@ namespace TwitchBot
 
             if (urlData.Equals("Channel is not live.")) { return (channel + " is currently offline."); }
             else { return channel + " has been live for " + urlData; }
-        }
-
-        internal void CutDick()
-        {
-
-            //if (chatObj.ChatMessage.Equals("!dicks"))
-            //{
-            //    ircClient.sendChatMessage(chatObj.Channel, "8===D");
-            //    ircClient.sendChatMessage(chatObj.Channel, "8==/=D");
-            //    ircClient.sendChatMessage(chatObj.Channel, "8==/~");
-            //    ircClient.sendChatMessage(chatObj.Channel, chatObj.User + "'s dick has been cut off. " + chatObj.User + " bled out on the floor. " + chatObj.User + " is now dead.");
-            //}
         }
         #endregion
 

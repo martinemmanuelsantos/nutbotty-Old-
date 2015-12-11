@@ -13,7 +13,7 @@ using TwitchBot.Events;
 
 namespace TwitchBot
 {
-    class TwitchChatBot
+    class Nutbotty
     {
 
         #region Attributes
@@ -26,28 +26,33 @@ namespace TwitchBot
         const string IRC_SERVER = "irc.twitch.tv";
         const string WHISPER_SERVER = "192.16.64.212";
         const int PORT = 6667;
+        public static List<Channel> channels;
+        public static List<Quote> quotes;
         #endregion
 
         #region TwitchChatBot Entry Point
         static void Main(string[] args)
         {
-            //List<TwitchChannel> channels = TwitchChatBotDB.GetChannels();
-            //foreach (TwitchChannel channel in channels)
-            //{
-            //    Debug.WriteLine(channel);
-            //}
+            // Set up the chat server and whisper server, using the authentication fields
             TwitchChatConnection chatConnection = new TwitchChatConnection(new IrcClient(IRC_SERVER, PORT, RECONNECT_TIME, BOTNAME, OAUTH_TOKEN), false);
             TwitchChatConnection whisperConnection = new TwitchChatConnection(new IrcClient(WHISPER_SERVER, PORT, RECONNECT_TIME, BOTNAME, OAUTH_TOKEN), true);
 
-            List<TwitchChannel> channels = new List<TwitchChannel>();
-            channels.Add(new TwitchChannel(BOTNAME));
-            channels.AddRange(TwitchChatBotDB.GetChannels());
-
-            foreach (TwitchChannel channel in channels)
+            // Create a list of channels from all the rows in the CHANNELS table, as well as the bot itself,
+            // then create a connection to the chat server and whisper connection
+            channels = new List<Channel>();
+            channels.Add(new Channel(BOTNAME));
+            channels.AddRange(Database.GetChannelList());
+            foreach (Channel channel in channels)
             {
                 new TwitchChatRoom(chatConnection, whisperConnection, channel);
             }
 
+            // Retrieve the list of quotes from the database
+            quotes = new List<Quote>();
+            quotes.AddRange(Database.GetQuotesList());
+
+            // Start the pulling in data from the chat server and whisper server streams
+            // (if you want to added a second, third, fourth etc. bot, double up on these threads)
             new Thread(new ThreadStart(chatConnection.Run)).Start();
             new Thread(new ThreadStart(whisperConnection.Run)).Start();
 

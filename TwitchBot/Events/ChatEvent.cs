@@ -10,7 +10,7 @@ namespace TwitchBot.Events
     /// Message class for defining IRC message attributes
     /// IRC message format: :<user>!<user>@<user>.tmi.twitch.tv PRIVMSG #<channel> :<chat>
     /// </summary>
-    class TwitchChatMessage : TwitchChatEvent
+    class ChatEvent : Event
     {
         #region Member Variables
         private string user;                        // Username of the user that created the message
@@ -29,7 +29,7 @@ namespace TwitchBot.Events
         #endregion
 
         #region Constructor
-        public TwitchChatMessage(string ircString)
+        public ChatEvent(string ircString)
         {
             // Set main attributes of chat message
             this.user = ParseUser(ircString);

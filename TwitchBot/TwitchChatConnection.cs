@@ -61,7 +61,7 @@ namespace TwitchBot
         {
             while (true)
             {
-                TwitchChatEvent chatEvent = GetNextEvent();
+                Event chatEvent = GetNextEvent();
                 RespondToEvent(chatEvent);
             }            
         }
@@ -72,7 +72,7 @@ namespace TwitchBot
         /// </summary>
         /// <param name="ircString">Complete IRC string</param>
         /// <returns></returns>
-        private TwitchChatEvent GetNextEvent()
+        private Event GetNextEvent()
         {
             // Retrieve the whole IRC message. If you are disconnected, repeatedly request to connect to the server indefinitely
             string ircString = null;
@@ -89,7 +89,7 @@ namespace TwitchBot
                 }
             }
 
-            return TwitchChatEvent.parseEvent(ircString);
+            return Event.parseEvent(ircString);
         }
 
         #region Bot Logic
@@ -97,21 +97,21 @@ namespace TwitchBot
         /// Logic for responding to chat events
         /// </summary>
         /// <param name="chatEvent"></param>
-        private void RespondToEvent(TwitchChatEvent chatEvent)
+        private void RespondToEvent(Event chatEvent)
         {
 
             // Logic for responding to a "PING" event
-            if (chatEvent.GetType().Equals(typeof(TwitchChatPing)))
+            if (chatEvent.GetType().Equals(typeof(PingEvent)))
             {
                 ircClient.sendIrcString("PONG");
                 Log.Message(chatEvent.ToString(), false);
             }
 
             // Logic for responding to a "PRIVMSG" event
-            else if (chatEvent.GetType().Equals(typeof(TwitchChatMessage)))
+            else if (chatEvent.GetType().Equals(typeof(ChatEvent)))
             {
                 // Check all the chat roomms currently connected, then respond to the correct channel
-                TwitchChatMessage chatMessage = (TwitchChatMessage)chatEvent;
+                ChatEvent chatMessage = (ChatEvent)chatEvent;
                 foreach (TwitchChatRoom chatroom in chatrooms)
                 {
                     if (chatMessage.Channel.Equals(chatroom.Channel.ChannelName))
@@ -123,15 +123,15 @@ namespace TwitchBot
             }
 
             // Logic for responding to a "WHISPER" event
-            else if (chatEvent.GetType().Equals(typeof(TwitchChatWhisper)))
+            else if (chatEvent.GetType().Equals(typeof(WhisperEvent)))
             {
                 Log.Message(chatEvent.ToString(), true);
             }
 
             // Logic for responding to a "HOST" event
-            else if (chatEvent.GetType().Equals(typeof(TwitchChatHost)))
+            else if (chatEvent.GetType().Equals(typeof(HostEvent)))
             {
-                TwitchChatHost hostData = (TwitchChatHost)chatEvent;
+                HostEvent hostData = (HostEvent)chatEvent;
                 ircClient.sendChatMessage(hostData.Hostee, chatEvent.ToString());
                 Log.Message(hostData.ToString(), true);
             }

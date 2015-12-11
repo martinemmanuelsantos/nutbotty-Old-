@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace TwitchBot.Events
 {
-    class TwitchChatHost : TwitchChatEvent
+    class HostEvent : Event
     {
         #region Member Variables
         string host;                    // The channel that is hosting
@@ -14,7 +14,7 @@ namespace TwitchBot.Events
         #endregion
 
         #region Constructors
-        public TwitchChatHost(string ircString)
+        public HostEvent(string ircString)
         {
             this.host = ParseHost(ircString);
             this.hostee = ParseHostee(ircString);
