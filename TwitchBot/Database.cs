@@ -52,55 +52,6 @@ namespace TwitchBot
 
             return channels;
         }
-
-        /// <summary>
-        /// Add a TwitchChannel entity to the CHANNELS table
-        /// </summary>
-        /// <param name="channel"></param>
-        public static void AddChannel(Channel channel)
-        {
-            string insertStatement = @"INSERT INTO CHANNELS (ChannelName) VALUES (@channelName)";
-            SqlConnection connection = GetConnection();
-            SqlCommand insertCommand = new SqlCommand(insertStatement, connection);
-            insertCommand.Parameters.AddWithValue("@channelName", channel.ChannelName);
-            try { connection.Open(); insertCommand.ExecuteNonQuery(); }
-            catch (SqlException e) { Log.Message(e.Message, true); }
-        }
-
-        /// <summary>
-        /// Remove all rows in CHANNELS table where the ChannelName is channel
-        /// </summary>
-        /// <param name="channel"></param>
-        public static void RemoveChannel(string channel)
-        {
-            string deleteStatement = @"DELETE FROM CHANNELS WHERE ChannelName = '" + channel + "'";
-            SqlConnection connection = GetConnection();
-            SqlCommand deleteCommand = new SqlCommand(deleteStatement, connection);
-            try { connection.Open(); deleteCommand.ExecuteNonQuery(); }
-            catch (SqlException e) { Log.Message(e.Message, true); }
-        }
-
-        /// <summary>
-        /// Check if a row exists with the given channel name
-        /// </summary>
-        /// <param name="channel"></param>
-        public static bool ChannelExists(string channel)
-        {
-            string existsStatement = @"SELECT COUNT(*) FROM CHANNELS WHERE ChannelName = '" + channel + "'";
-            SqlConnection connection = GetConnection();
-            SqlCommand existsCommand = new SqlCommand(existsStatement, connection);
-            try
-            {
-                connection.Open();
-                int count = (int)existsCommand.ExecuteScalar();
-                if (count > 0)
-                {
-                    return true;
-                }
-            }
-            catch (SqlException e) { Log.Message(e.Message, true); }
-            return false;
-        }
         #endregion
 
         #region QUOTES Table
@@ -133,85 +84,75 @@ namespace TwitchBot
 
             return quotes;
         }
+        #endregion
 
+        #region Test
         /// <summary>
-        /// Add a TwitchChannel entity to the CHANNELS table
+        /// Add an entry to a specified table
         /// </summary>
-        /// <param name="channel"></param>
-        public static void AddQuote(Quote quote)
+        /// <param name="tableName">Name of the table that entry will be inserted into</param>
+        /// <param name="columnNames">Name of the columns to write data into</param>
+        /// <param name="parameterNames">Parameter names for insert statement</param>
+        /// <param name="addParameters">Method for adding parameters to insert statement</param>
+        public static void InsertEntry(string tableName, string columnNames, string parameterNames, Action<SqlCommand> addParameters)
         {
-            string insertStatement = @"INSERT INTO QUOTES (QuoteText, ChannelName, AddedBy, DateAdded)
-                                VALUES (@quoteText, @channelName, @addedBy, @dateAdded)";
-            SqlConnection connection = GetConnection();
-            SqlCommand insertCommand = new SqlCommand(insertStatement, connection);
-            insertCommand.Parameters.AddWithValue("@quoteText", quote.QuoteText);
-            insertCommand.Parameters.AddWithValue("@channelName", quote.Channel);
-            insertCommand.Parameters.AddWithValue("@addedBy", quote.AddedBy);
-            insertCommand.Parameters.AddWithValue("@dateAdded", quote.DateAdded);
-            try { connection.Open(); insertCommand.ExecuteNonQuery(); }
-            catch (SqlException e) { Log.Message(e.Message, true); }
+            using (SqlConnection connection = GetConnection())
+            {
+                // Build up the SQL command
+                string insertStatement = @"INSERT INTO " + tableName + " (" + columnNames + ") VALUES ("+parameterNames+")";
+                SqlCommand insertCommand = new SqlCommand(insertStatement, connection);
+
+                // Add the parameters of the object to be saved into database
+                addParameters(insertCommand);
+
+                // Execute insert command
+                try { connection.Open(); insertCommand.ExecuteNonQuery(); }
+                catch (SqlException e) { Log.Message(e.Message, true); }
+            }
         }
 
         /// <summary>
-        /// Remove all rows in CHANNELS table where the ChannelName is channel
+        /// Searches for an entry from a specified table, where the parameter in the specified column matches "parameterString",
+        /// then deletes the entry
         /// </summary>
-        /// <param name="channel"></param>
-        public static void DeleteQuote(string quote)
+        /// <param name="tableName">Name of the table that entry will be deleted from</param>
+        /// <param name="columnName">Name of the column where parameter will be matched</param>
+        /// <param name="parameterString">Parameter string to match</param>
+        public static void DeleteEntry(string tableName, string columnName, string parameterString)
         {
-            string quoteEscapeApostrophes = quote.Replace("'", "''");                   // Escape ' characters with ''
-            Console.WriteLine(quoteEscapeApostrophes);
-            string deleteStatement = @"DELETE FROM QUOTES WHERE QuoteText = '" + quoteEscapeApostrophes + "'";
-            SqlConnection connection = GetConnection();
-            SqlCommand deleteCommand = new SqlCommand(deleteStatement, connection);
-            try { connection.Open(); deleteCommand.ExecuteNonQuery(); }
-            catch (SqlException e) { Log.Message(e.Message, true); }
+            using (SqlConnection connection = GetConnection())
+            {
+                // Build up the SQL command
+                string parameter = parameterString.Replace("'", "''");                   // Escape ' characters with ''
+                string deleteStatement = @"DELETE FROM " + tableName + " WHERE " + columnName + " = '" + parameter + "'";
+
+                // Add the parameters of the object to be saved into database
+                SqlCommand deleteCommand = new SqlCommand(deleteStatement, connection);
+
+                // Execute delete command
+                try { connection.Open(); deleteCommand.ExecuteNonQuery(); }
+                catch (SqlException e) { Log.Message(e.Message, true); }
+            }
         }
 
         /// <summary>
-        /// Retrive all TwitchChannel entities and populate a list
-        /// </summary>
-        /// <returns>List of TwitchChannel entities</returns>
-        //public static Quote GetQuote(int quoteId)
-        //{
-        //    SqlConnection connection = GetConnection();
-        //    string selectStatement = @"SELECT * FROM QUOTES ORDER BY [QuoteID]";
-        //    SqlCommand selectCommand = new SqlCommand(selectStatement, connection);
-        //    try
-        //    {
-        //        connection.Open();
-        //        SqlDataReader reader = selectCommand.ExecuteReader();
-        //        while (reader.Read())
-        //        {
-        //            Quote quote = new Quote(reader["QuoteText"].ToString(),
-        //                reader["ChannelName"].ToString(),
-        //                reader["AddedBy"].ToString(),
-        //                (DateTime)reader["DateAdded"]);
-        //            quotes.Add(quote);
-        //        }
-        //        reader.Close();
-        //    }
-        //    catch (SqlException e) { Log.Message(e.Message, true); }
-        //    finally { connection.Close(); }
-
-        //    return quotes;
-        //}
-
-        /// <summary>
-        /// Check if a row exists with the given channel name
-        /// </summary>
-        /// <param name="channel"></param>
-        public static bool QuoteExists(string quote)
+        /// Searches for an entry from a specified table, where the parameter in the specified column matches parameterString,
+        /// then returns true if an entry was found
+        /// </summary> 
+        /// <param name="tableName">Name of the table that entry will be searched from</param>
+        /// <param name="columnName">Name of the column where parameter will be matched</param>
+        /// <param name="parameterString">Parameter string to match</param>
+        /// <returns>True if parameterString was found in columnName from tableName</returns>
+        public static bool EntryExists(string tableName, string columnName, string parameterString)
         {
-            string quoteEscapeApostrophes = quote.Replace("'", "''");                   // Escape ' characters with ''
-            Console.WriteLine(quoteEscapeApostrophes);
-            string existsStatement = @"SELECT COUNT(*) FROM QUOTES WHERE QuoteText = '" + quoteEscapeApostrophes + "'";
+            string parameter = parameterString.Replace("'", "''");                   // Escape ' characters with ''
+            string existsStatement = @"SELECT COUNT(*) FROM " + tableName + " WHERE " + columnName + " = '" + parameter + "'";
             SqlConnection connection = GetConnection();
             SqlCommand existsCommand = new SqlCommand(existsStatement, connection);
             try
             {
                 connection.Open();
                 int count = (int)existsCommand.ExecuteScalar();
-                Console.WriteLine(existsCommand.ExecuteScalar());
                 if (count > 0)
                 {
                     return true;
@@ -219,7 +160,58 @@ namespace TwitchBot
             }
             catch (SqlException e) { Log.Message(e.Message, true); }
             return false;
-        } 
+        }
+
+        /// <summary>
+        /// Returns the number of rows in a specified table
+        /// </summary>
+        /// <param name="tableName">Name of the table that will be counted</param>
+        /// <returns></returns>
+        public static int CountRows(string tableName)
+        {
+            string countStatement = @"SELECT COUNT(*) FROM " + tableName;
+            SqlConnection connection = GetConnection();
+            SqlCommand existsCommand = new SqlCommand(countStatement, connection);
+            try
+            {
+                connection.Open();
+                int count = (int)existsCommand.ExecuteScalar();
+                return count;
+            }
+            catch (SqlException e) { Log.Message(e.Message, true); }
+            return 0;
+        }
+
+        /// <summary>
+        /// Retrive all TwitchChannel entities and populate a list
+        /// </summary>
+        /// <returns>List of TwitchChannel entities</returns>
+        public static T GetEntryAt<T>(string tableName, int rowNumber, Func<SqlDataReader, T> getEntityData)
+        {
+
+            using (SqlConnection connection = GetConnection())
+            {
+                string selectStatement = @"SELECT * FROM " + tableName;
+                SqlCommand selectCommand = new SqlCommand(selectStatement, connection);
+                try
+                {
+                    connection.Open();
+                    SqlDataReader reader = selectCommand.ExecuteReader();
+                    for (int i = 0; reader.Read(); i++)
+                    {
+                        if (i == rowNumber)
+                        {
+                            return getEntityData(reader);
+                        }
+                    }
+                    reader.Close();
+                }
+                catch (SqlException e) { Log.Message(e.Message, true); }
+                finally { connection.Close(); }
+            }
+
+            return default(T);
+        }
         #endregion
 
     }

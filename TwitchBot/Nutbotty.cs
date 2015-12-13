@@ -47,10 +47,6 @@ namespace TwitchBot
                 new TwitchChatRoom(chatConnection, whisperConnection, channel);
             }
 
-            // Retrieve the list of quotes from the database
-            quotes = new List<Quote>();
-            quotes.AddRange(Database.GetQuotesList());
-
             // Start the pulling in data from the chat server and whisper server streams
             // (if you want to added a second, third, fourth etc. bot, double up on these threads)
             new Thread(new ThreadStart(chatConnection.Run)).Start();

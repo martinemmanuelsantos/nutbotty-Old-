@@ -77,10 +77,10 @@ namespace TwitchBot
                 if (message.Equals("!join") && channelName.Equals(Nutbotty.BOTNAME))
                 {
                     Log.Message(user + " requested " + Nutbotty.BOTNAME + " to join their channel.", true);
-                    if (!Database.ChannelExists(user))
+                    if (!Channel.ChannelExistsInDB(user))
                     {
                         Channel channel = new Channel(user);
-                        Database.AddChannel(channel);
+                        Channel.AddChannelToDB(channel);
                         new TwitchChatRoom(chatConnection, whisperConnection, channel);
                         SendChatMessage(Nutbotty.BOTNAME + " is now available for " + user + ". Type !commands for a list of commands you can use.");
                     }
@@ -93,9 +93,9 @@ namespace TwitchBot
                 if (message.Equals("!part") && channelName.Equals(Nutbotty.BOTNAME))
                 {
                     Log.Message(user + " requested " + Nutbotty.BOTNAME + " to part their channel.", true);
-                    if (Database.ChannelExists(user))
+                    if (Channel.ChannelExistsInDB(user))
                     {
-                        Database.RemoveChannel(user);
+                        Channel.DeleteChannelFromDB(user);
                         chatConnection.part(user);
                         SendChatMessage("@" + user + ", thank you for using " + Nutbotty.BOTNAME + ".Type !join if you ever want to use " + Nutbotty.BOTNAME + " again.");
                     }
@@ -142,11 +142,40 @@ namespace TwitchBot
 
                 #region QUOTE Commands
                 // Pull a random quote from the QUOTES table
-                if (message.Equals("!quote"))
+                if (message.StartsWith("!quote"))
                 {
-                    int randomId = RNG.Next(0, Nutbotty.quotes.Count);
-                    SendChatMessage("[" + randomId + "] " + Nutbotty.quotes[randomId].QuoteText);
-                    Console.WriteLine(randomId + " " + Nutbotty.quotes.Count);
+                    //int randomId = RNG.Next(0, Nutbotty.quotes.Count);
+                    //SendChatMessage("[" + randomId + "] " + Nutbotty.quotes[randomId].QuoteText);
+                    //Console.WriteLine(randomId + " " + Nutbotty.quotes.Count);
+
+                    // Assume the command has no arguments, then split on space characters
+                    string[] args = message.Split(' ');
+
+                    // If there is at least one argument, continue, otherwise end if
+                    int ID = -1;
+                    if (args.Length <= 1)
+                    {
+                        ID = RNG.Next(0, Quote.QuoteCountInDB());
+                        Log.Message(user + " requested a random quote from the database.", true);
+                    } else
+                    {
+                        try {
+                            ID = Convert.ToInt32(args[1]);
+                            Log.Message(user + " requested for quote #" + ID + " from the database.", true);
+                        } catch (Exception e)
+                        {
+                            Log.Message(e.Message, true);
+                        }
+                    }
+
+                    // Check if the quote ID is positive and <= number of rows in the database table
+                    if (ID >= 0 && ID < Quote.QuoteCountInDB())
+                    {
+                        SendChatMessage("[" + ID + "] " + Quote.GetQuoteFromDBAtRow(ID).QuoteText);
+                    } else
+                    {
+                        SendWhisper(user, "There are only " + Quote.QuoteCountInDB() + " quotes in the database.");
+                    }
                 }
 
                 // Add a quote to the QUOTE table
@@ -158,20 +187,26 @@ namespace TwitchBot
                     
                     // If the user is a moderator, add the quote to the database, else do nothing
                     if (chatData.UserIsModerator) {
-                        // Assume the command has no arguments
+                        // Assume the command has no arguments, then split on space characters
                         bool hasArgs = false;
-                        // Split the command on space characters
                         string[] args = message.Split(' ');
+
                         // If there is at least one argument, continue, otherwise end if
                         if (args.Length > 1) { hasArgs = true; }
                         else { Log.Message("<" + channelName + "> " + user + " attempted to add quote, but there was not enough arguments.", true); }
-                        // Add quote to database if there were arguments
+                        // Add quote to database if there were arguments and quote doesn't already exist in the database
                         if (hasArgs)
                         {
-                            Database.AddQuote(quote);
-                            Nutbotty.quotes.Add(quote);
-                            SendChatMessage(user + " added quote [" + Nutbotty.quotes.Count + "]: " + quoteText);
-                            Log.Message("<" + channelName + "> " + user + " added quote: " + quoteText, true);
+                            if (Quote.QuoteExistsInDB(quoteText))
+                            {
+                                SendChatMessage(user + ", that quote is already in the database.");
+                                Log.Message("<" + channelName + "> " + user + " attempted to add quote, but it already exists --> " + quoteText, true);
+                            } else
+                            {
+                                Quote.AddQuoteToDB(quote);
+                                SendChatMessage(user + " added quote [" + (Quote.QuoteCountInDB()-1) + "]: " + quoteText);
+                                Log.Message("<" + channelName + "> " + user + " added quote: " + quoteText, true);
+                            }
                         }
                     } else
                     {
@@ -196,17 +231,18 @@ namespace TwitchBot
                         // If there is at least one argument, continue, otherwise end if
                         if (args.Length > 1) { hasArgs = true; }
                         else { Log.Message("<" + channelName + "> " + user + " attempted to delete a quote, but there was not enough arguments.", true); }
-                        // Add quote to database if there were arguments
+                        // Add quote to database if there were arguments and the quote exists
                         if (hasArgs)
                         {
-                            Database.DeleteQuote(quoteText);
-                            for (int i = 0; i < Nutbotty.quotes.Count; i++)
+                            if (Quote.QuoteExistsInDB(quoteText))
                             {
-                                if (Nutbotty.quotes[i].QuoteText.Equals(quoteText))
-                                {
-                                    Nutbotty.quotes.RemoveAt(i);
-                                    SendChatMessage(user + " deleted quote [" + i + "]: " + quoteText);
-                                }
+                                Quote.DeleteQuoteFromDB(quoteText);
+                                SendChatMessage(user + " deleted quote: " + quoteText);
+                                Log.Message("<" + channelName + "> " + user + " deleted quote: " + quoteText, true);
+                            } else
+                            {
+                                SendChatMessage(user + ", that quote was not found in the database.");
+                                Log.Message("<" + channelName + "> " + user + " attempted to deleted quote, but it does not exist --> " + quoteText, true);
                             }
                         }
                     }
@@ -284,7 +320,7 @@ namespace TwitchBot
         /// <param name="message">Message to send to the chat room</param>
         internal void SendChatMessage(string message)
         {
-            this.chatConnection.IrcClient.sendChatMessage(this.channel.ChannelName, message);
+            this.chatConnection.IrcClient.SendChatMessage(this.channel.ChannelName, message);
             Log.Message("<" + this.channel.ChannelName + "> " + message, true);
         }
         /// <summary>
@@ -293,7 +329,7 @@ namespace TwitchBot
         /// <param name="message">Message to send to the chat room</param>
         internal void SendChatMessageNoAction(string message)
         {
-            this.chatConnection.IrcClient.sendChatMessageNoAction(this.channel.ChannelName, message);
+            this.chatConnection.IrcClient.SendChatMessageNoAction(this.channel.ChannelName, message);
             Log.Message("<" + this.channel.ChannelName + "> " + message, true);
         }
 
@@ -304,7 +340,8 @@ namespace TwitchBot
         /// <param name="message">Message to whisper</param>
         internal void SendWhisper(string user, string message)
         {
-            this.whisperConnection.IrcClient.sendWhisper(user, message);
+            this.whisperConnection.IrcClient.SendWhisper(user, message);
+            Log.Message(Nutbotty.BOTNAME + " >> " + user + ": " + message, true);
         }
 
 

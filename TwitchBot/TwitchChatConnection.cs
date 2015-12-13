@@ -23,10 +23,10 @@ namespace TwitchBot
         public TwitchChatConnection(IrcClient ircClient, bool isWhisperConnection)
         {
             this.ircClient = ircClient;
-            this.ircClient.connect();
+            this.ircClient.Connect();
             if (isWhisperConnection)
             {
-                ircClient.sendIrcString("CAP REQ :twitch.tv/commands");
+                ircClient.SendIrcString("CAP REQ :twitch.tv/commands");
             }
         } 
         #endregion
@@ -45,13 +45,13 @@ namespace TwitchBot
         #region Methods
         internal void join(TwitchChatRoom channel)
         {
-            ircClient.joinChannel(channel.Channel.ChannelName);
+            ircClient.JoinChannel(channel.Channel.ChannelName);
             chatrooms.AddLast(channel);
         }
 
         internal void part(string channel)
         {
-            ircClient.partChannel(channel);
+            ircClient.PartChannel(channel);
         }
 
         /// <summary>
@@ -80,12 +80,12 @@ namespace TwitchBot
             {
                 try
                 {
-                    ircString = this.ircClient.readIrcString();
+                    ircString = this.ircClient.ReadIrcString();
                 }
                 catch (Exception e)
                 {
                     Log.Message("You have been disconnected: " + e, true);
-                    this.ircClient.connect();
+                    this.ircClient.Connect();
                 }
             }
 
@@ -103,7 +103,7 @@ namespace TwitchBot
             // Logic for responding to a "PING" event
             if (chatEvent.GetType().Equals(typeof(PingEvent)))
             {
-                ircClient.sendIrcString("PONG");
+                ircClient.SendIrcString("PONG");
                 Log.Message(chatEvent.ToString(), false);
             }
 
@@ -132,7 +132,7 @@ namespace TwitchBot
             else if (chatEvent.GetType().Equals(typeof(HostEvent)))
             {
                 HostEvent hostData = (HostEvent)chatEvent;
-                ircClient.sendChatMessage(hostData.Hostee, chatEvent.ToString());
+                ircClient.SendChatMessage(hostData.Hostee, chatEvent.ToString());
                 Log.Message(hostData.ToString(), true);
             }
 

@@ -44,7 +44,7 @@ namespace TwitchBot
             this.password = password;
         }
 
-        public void connect()
+        public void Connect()
         {
             Log.Message("Attempting to connect to " + ip + " | Port: " + port, true);
 
@@ -79,8 +79,8 @@ namespace TwitchBot
 
 
 
-            sendIrcString("CAP REQ :twitch.tv/tags");
-            sendIrcString("CAP REQ :twitch.tv/membership"); 
+            SendIrcString("CAP REQ :twitch.tv/tags");
+            SendIrcString("CAP REQ :twitch.tv/membership"); 
 
         }
 
@@ -88,7 +88,7 @@ namespace TwitchBot
         /// Join a given channel
         /// </summary>
         /// <param name="channel">The channel to join</param>
-        public void joinChannel(string channel)
+        public void JoinChannel(string channel)
         {
             outputStream.WriteLine("JOIN #" + channel);
             outputStream.Flush();
@@ -99,7 +99,7 @@ namespace TwitchBot
         /// Join a given channel
         /// </summary>
         /// <param name="channel"></param>
-        public void partChannel(string channel)
+        public void PartChannel(string channel)
         {
             outputStream.WriteLine("PART #" + channel);
             outputStream.Flush();
@@ -110,7 +110,7 @@ namespace TwitchBot
         /// Wrapper method for sending IRC messages
         /// </summary>
         /// <param name="message">Raw string to send to IRC server</param>
-        public void sendIrcString(string message)
+        public void SendIrcString(string message)
         {
             outputStream.WriteLine(message);
             outputStream.Flush();
@@ -121,7 +121,7 @@ namespace TwitchBot
         /// Retrieves entire IRC message
         /// </summary>
         /// <returns>Entire IRC message</returns>
-        public string readIrcString()
+        public string ReadIrcString()
         {
             String message = inputStream.ReadLine();
             Log.Message(message, false);
@@ -133,9 +133,9 @@ namespace TwitchBot
         /// </summary>
         /// <param name="channel">Channel to send chat message</param>
         /// <param name="message">Chat message</param>
-        public void sendChatMessage(string channel, string message)
+        public void SendChatMessage(string channel, string message)
         {
-            sendIrcString(":" + username + "!" + username + "@" + username + ".tmi.twitch.tv PRIVMSG #" + channel + " :/me " + message);
+            SendIrcString(":" + username + "!" + username + "@" + username + ".tmi.twitch.tv PRIVMSG #" + channel + " :/me " + message);
             outputStream.Flush();
             Log.Message(message, false);
         }
@@ -145,9 +145,9 @@ namespace TwitchBot
         /// </summary>
         /// <param name="channel">Channel to send chat message</param>
         /// <param name="message">Chat message</param>
-        public void sendChatMessageNoAction(string channel, string message)
+        public void SendChatMessageNoAction(string channel, string message)
         {
-            sendIrcString(":" + username + "!" + username + "@" + username + ".tmi.twitch.tv PRIVMSG #" + channel + " : " + message);
+            SendIrcString(":" + username + "!" + username + "@" + username + ".tmi.twitch.tv PRIVMSG #" + channel + " : " + message);
             outputStream.Flush();
             Log.Message(message, false);
         }
@@ -157,9 +157,9 @@ namespace TwitchBot
         /// </summary>
         /// <param name="user"></param>
         /// <param name="message"></param>
-        public void sendWhisper(string user, string message)
+        public void SendWhisper(string user, string message)
         {
-            sendIrcString("PRIVMSG #jtv :/w " + user + " /me " + message);
+            SendIrcString("PRIVMSG #jtv :/w " + user + " /me " + message);
             outputStream.Flush();
             Log.Message(message, true);
         }
