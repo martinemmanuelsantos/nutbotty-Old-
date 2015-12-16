@@ -103,40 +103,54 @@ namespace TwitchBot
                     {
                         SendChatMessage(Nutbotty.BOTNAME + " is not in #" + user + ".");
                     }
-                } 
+                }
                 #endregion
 
                 #region Generic Commands
-                // TO-DO: Support the following variables for commands: $channel $user $uptime 
-                if (message.Equals("!discord") && channelName.Equals("oatsngoats"))
+                // Iterate through table rows in database and check if the trigger text matches the message
+                for (int i = 0; i < ChatCommand.CommandCountInDB(); i++)
                 {
-                    if (chatData.UserIsSubscriber)
-                        SendWhisper(user, "Thanks for subscribing to " + chatData.Channel + ". Please feel free to join the subscriber Discord channel: https://discord.gg/0f4ukPJq31KmhHcZ");
-                    else
-                        SendWhisper(user, "You are not subscribed to " + chatData.Channel + ".");
-                }
-                
-                if (message.Contains(Nutbotty.BOTNAME) && message.Contains("how many points") && channelName.Equals("oatsngoats"))
-                {
-                    SendChatMessageNoAction("!points");
-                }
+                    //Retrieve command from the database and replace the appropriate strings
+                    ChatCommand command = ChatCommand.GetCommandFromDBAtRow(i);
+                    string responseText = command.ResponseText;
+                    responseText = responseText.Replace("$channel", channelName);
+                    responseText = responseText.Replace("$user", user);
 
-                if (message.Equals("!commands")) { SendChatMessage("Click here for a list of my commands: http://bombch.us/BRtQ"); }
-                if (message.Equals("!playlist")) { SendChatMessage("Click here for the BEST playlist ever: http://bombch.us/Bm5w"); }
-                if (message.Equals("!hitbox")) { SendChatMessage("Watch me on Hitbox for minimal delay: www.hitbox.tv/nutella4eva"); }
-                if (message.Equals("!youtube")) { SendChatMessage("Watch me on YouTube Gaming for quality options: gaming.youtube.com/hamtotem/live"); }
-                if (message.Equals("!joicaster")) { SendChatMessage("Try out all my streams www.twitch.tv/nutella4eva www.hitbox.tv/nutella4eva gaming.youtube.com/hamtotem/live"); }
-                if (message.Equals("!emotes")) { SendChatMessage("Click here to see list of FrankerFaceZ emotes for " + chatData.Channel + ": www.frankerfacez.com/" + chatData.Channel); }
-                if (message.Equals("!ffz")) { SendChatMessage("Install the FrankerFaceZ plugin to use custom emotes: www.frankerfacez.com"); }
-                if (message.Equals("!foosdaraid")) { SendChatMessage("Foosda Raid ( ͡° ͜ʖ ͡°)"); }
-                if (message.Equals("!sohawt")) { SendChatMessage("http://i.imgur.com/wp5vWsl.png"); }
-
-                // Show the uptime for the stream. Information is pulled from DecAPI API by Alex Thomassen
-                if (message.Equals("!uptime"))
-                {
-                    string uptime = GetUptime(chatData.Channel);
-                    SendChatMessage("@" + user + ": " + uptime);
-                    Log.Message(user + " checked the uptime for #" + chatData.Channel + ": " + uptime, true);
+                    // Check if the command needs to be matched exactly or "loosely"
+                    if ((command.MustBeExact && message.Equals(command.TriggerText)) || (!command.MustBeExact && message.Contains(command.TriggerText)))
+                    {
+                        // Check if the command is universal, or if the command is in the correct channel
+                        if (command.IsUniversal || channelName.Equals(command.ChannelName))
+                        {
+                            // Check if the user is the subscriber (iff the command is subscriber only)
+                            if ((command.SubscriberOnly && chatData.UserIsSubscriber) || !(command.SubscriberOnly))
+                            {
+                                // Check if the user is the moderator (iff the command is moderator only)
+                                if ((command.ModeratorOnly && chatData.UserIsModerator) || !(command.ModeratorOnly))
+                                {
+                                    // Check if the user is the broadcaster (iff the command is broadcaster only)
+                                    if ((command.BroadcasterOnly && chatData.UserIsBroadcaster) || !(command.BroadcasterOnly))
+                                    {
+                                        // Check if the command is whisper only
+                                        if (command.WhisperResponse) { SendWhisper(user, responseText); }
+                                        else { SendChatMessage(responseText); }
+                                    }
+                                    else
+                                    {
+                                        SendWhisper(user, command.TriggerText + " is only available to the broadcaster.");
+                                    }
+                                }
+                                else
+                                {
+                                    SendWhisper(user, command.TriggerText + " is only available to moderators.");
+                                }
+                            }
+                            else
+                            {
+                                SendWhisper(user, command.TriggerText + " is only available to subscribers.");
+                            }
+                        }
+                    }
                 }
                 #endregion
 
@@ -144,10 +158,6 @@ namespace TwitchBot
                 // Pull a random quote from the QUOTES table
                 if (message.StartsWith("!quote"))
                 {
-                    //int randomId = RNG.Next(0, Nutbotty.quotes.Count);
-                    //SendChatMessage("[" + randomId + "] " + Nutbotty.quotes[randomId].QuoteText);
-                    //Console.WriteLine(randomId + " " + Nutbotty.quotes.Count);
-
                     // Assume the command has no arguments, then split on space characters
                     string[] args = message.Split(' ');
 
@@ -254,27 +264,6 @@ namespace TwitchBot
                 }
                 #endregion
 
-                #region CERESBOT Guesser
-                if (message.Contains(@"Round Started. Type !guess") && user.Equals("ceresbot"))
-                {
-                    int seed = RNG.Next(100);
-
-                    // 30% chance of 45 seconds | 65% chance of 46 seconds | 5% chance of 47 seconds
-                    int seconds;
-                    if (seed < 30) { seconds = 45; }
-                    else if (seed < 95) { seconds = 46; }
-                    else { seconds = 47; }
-
-                    // if 45-46 seconds, milliseconds between 0-99, else between 0-25
-                    int milliseconds;
-                    if (seconds < 47) { milliseconds = RNG.Next(100); }
-                    else { milliseconds = RNG.Next(25); }
-
-                    // Make the guess
-                    SendChatMessageNoAction("!guess " + seconds + "\"" + milliseconds.ToString("00"));
-                }
-                #endregion
-
                 #region STRAWPOLL Parser
                 if (message.Contains("strawpoll.me/"))
                 {
@@ -303,6 +292,82 @@ namespace TwitchBot
                 }
                 #endregion
 
+                #region GUESSING Commands
+                // CeresBot Guesses
+                if (message.Contains(@"Round Started. Type !guess") && user.Equals("ceresbot"))
+                {
+                    int seed = RNG.Next(100);
+
+                    // 30% chance of 45 seconds | 65% chance of 46 seconds | 5% chance of 47 seconds
+                    int seconds;
+                    if (seed < 30) { seconds = 45; }
+                    else if (seed < 95) { seconds = 46; }
+                    else { seconds = 47; }
+
+                    // if 45-46 seconds, milliseconds between 0-99, else between 0-25
+                    int milliseconds;
+                    if (seconds < 47) { milliseconds = RNG.Next(100); }
+                    else { milliseconds = RNG.Next(25); }
+
+                    // Make the guess
+                    SendChatMessageNoAction("!guess " + seconds + "\"" + milliseconds.ToString("00"));
+                }
+
+                // Phantoon guesses
+                if (message.Equals("!phantoon"))
+                {
+                    int[] rands = new int[3];
+                    string label = null;
+                    int total = 0;
+
+                    // Calculate prediction
+                    for (int i = 0; i < rands.Length; i++)
+                    {
+                        rands[i] = RNG.Next(1, 4);
+                        total += rands[i];
+                        if (rands[i] == 1) { label = label + " SLOW"; }
+                        else if (rands[i] == 2) { label = label + " MID"; }
+                        else { label = label + " FAST"; }
+                    }
+
+                    // Send chat message
+                    if (total <= 3) { SendChatMessage("predicts " + label + ". THE RNG LORDS ARE WITH US PogChamp"); }
+                    else if (total > 3 && total <= 4) { SendChatMessage("predicts " + label + ". Praise Jesus BloodTrail"); }
+                    else if (total > 4 && total <= 6) { SendChatMessage("predicts " + label + ". Maybe this won't be a reset after all OMGScoots"); }
+                    else if (total > 6 && total <= 8) { SendChatMessage("predicts " + label + ". Phantoon please BibleThump"); }
+                    else if (total == 9) { SendChatMessage("predicts " + label + ". You motherfucker. RESET RESET RESET SwiftRage"); }
+                }
+
+                // Eyedoor guesses
+                if (message.Equals("!eyedoor"))
+                {
+                    int rand = RNG.Next(0, 5);
+
+                    // Send chat message
+                    if (rand == 0) { SendChatMessage("predicts... ZERO beams. THE RNG GODS ARE WITH YOU PogChamp"); }
+                    else if (rand == 1) { SendChatMessage("predicts... ONE beam. Allelujah! BloodTrail"); }
+                    else if (rand == 2) { SendChatMessage("predicts... TWO beams. You're lucky this time OMGScoots"); }
+                    else if (rand == 3) { SendChatMessage("predicts... THREE beams. Come on eye door! DansGame"); }
+                    else if (rand == 4) { SendChatMessage("predicts... FOUR beams. DAFUQ BITCH?! SwiftRage"); }
+                }
+                #endregion
+
+                #region OTHER Commands
+                // Show the uptime for the stream. Information is pulled from DecAPI API by Alex Thomassen
+                if (message.Equals("!uptime"))
+                {
+                    string uptime = GetUptime(chatData.Channel);
+                    SendChatMessage("@" + user + ": " + uptime);
+                    Log.Message(user + " checked the uptime for #" + chatData.Channel + ": " + uptime, true);
+                }
+
+                // Check how many points Nutbotty has on ceresbot
+                if (message.Contains(Nutbotty.BOTNAME) && message.Contains("how many points") && channelName.Equals("oatsngoats"))
+                {
+                    SendChatMessageNoAction("!points");
+                }
+                #endregion
+
             }
 
             // Logic for responding to an unknown event
@@ -323,6 +388,7 @@ namespace TwitchBot
             this.chatConnection.IrcClient.SendChatMessage(this.channel.ChannelName, message);
             Log.Message("<" + this.channel.ChannelName + "> " + message, true);
         }
+
         /// <summary>
         /// Send a chat message to the chat room
         /// </summary>

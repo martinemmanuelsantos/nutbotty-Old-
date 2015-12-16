@@ -11,9 +11,17 @@ namespace TwitchBot
     class Database
     {
         // Connection string for the database file (Right-click database file in Server Explorer --> Connection --> Connection String)
-        public const string connectionString = @"Data Source=(LocalDB)\MSSQLLocalDB;AttachDbFilename=
+        private const string connectionString = @"Data Source=(LocalDB)\MSSQLLocalDB;AttachDbFilename=
                         D:\Cloud\Dropbox\Projects\Microsoft Visual Studio\TwitchBot\TwitchBot\TwitchBot\NutbottyDB.mdf;
                         Integrated Security=True";
+
+        public static string ConnectionString
+        {
+            get
+            {
+                return connectionString;
+            }
+        }
 
         /// <summary>
         /// Connect to the SQL database
@@ -21,7 +29,7 @@ namespace TwitchBot
         /// <returns>The connection</returns>
         public static SqlConnection GetConnection()
         {            
-            SqlConnection connection = new SqlConnection(connectionString);
+            SqlConnection connection = new SqlConnection(ConnectionString);
             return connection;
         }
 
@@ -108,6 +116,7 @@ namespace TwitchBot
                 // Execute insert command
                 try { connection.Open(); insertCommand.ExecuteNonQuery(); }
                 catch (SqlException e) { Log.Message(e.Message, true); }
+                finally { connection.Close(); }
             }
         }
 
@@ -132,6 +141,7 @@ namespace TwitchBot
                 // Execute delete command
                 try { connection.Open(); deleteCommand.ExecuteNonQuery(); }
                 catch (SqlException e) { Log.Message(e.Message, true); }
+                finally { connection.Close(); }
             }
         }
 
@@ -159,6 +169,7 @@ namespace TwitchBot
                 }
             }
             catch (SqlException e) { Log.Message(e.Message, true); }
+            finally { connection.Close(); }
             return false;
         }
 
@@ -179,6 +190,7 @@ namespace TwitchBot
                 return count;
             }
             catch (SqlException e) { Log.Message(e.Message, true); }
+            finally { connection.Close(); }
             return 0;
         }
 
@@ -195,7 +207,7 @@ namespace TwitchBot
                 SqlCommand selectCommand = new SqlCommand(selectStatement, connection);
                 try
                 {
-                    connection.Open();
+                     connection.Open();
                     SqlDataReader reader = selectCommand.ExecuteReader();
                     for (int i = 0; reader.Read(); i++)
                     {

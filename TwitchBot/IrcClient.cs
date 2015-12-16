@@ -161,7 +161,7 @@ namespace TwitchBot
         {
             SendIrcString("PRIVMSG #jtv :/w " + user + " /me " + message);
             outputStream.Flush();
-            Log.Message(message, true);
+            Log.Message(message, false);
         }
 
     }
