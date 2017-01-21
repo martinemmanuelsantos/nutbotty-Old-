@@ -154,9 +154,103 @@ namespace TwitchBot
                 }
                 #endregion
 
+                #region BLOCKED PHRASE Commands
+                for (int i = 0; i < BlockedPhrase.PhraseCountInDB(); i++)
+                {
+                    string phrase = BlockedPhrase.GetPhraseFromDBAtRow(i);
+                    if (message.Contains(phrase))
+                    {
+                        if (!chatData.UserIsModerator) {
+                            SendChatMessageNoAction(".timeout " + user + " 1");
+                            SendWhisper(user, "Your messages have been purged from " + channelName + " for using the phrase \"" + phrase + "\".");
+                            Log.Message(user + " has been timed out from " + channelName + " for using the phrase \"" + phrase + "\".", true);
+                        }
+                    }
+                }
+
+                // Add a quote to the QUOTE table
+                if (message.StartsWith("!block "))
+                {
+                    // Parse the quote text data
+                    string phrase = message.Substring("!block ".Length);
+
+                    // If the user is a moderator, add the quote to the database, else do nothing
+                    if (chatData.UserIsModerator)
+                    {
+                        // Assume the command has no arguments, then split on space characters
+                        bool hasArgs = false;
+                        string[] args = message.Split(' ');
+
+                        // If there is at least one argument, continue, otherwise end if
+                        if (args.Length > 1) { hasArgs = true; }
+                        else { Log.Message("<" + channelName + "> " + user + " attempted to block phrase, but there was not enough arguments.", true); }
+                        // Add phrase to database if there were arguments and phrase doesn't already exist in the database
+                        if (hasArgs)
+                        {
+                            if (BlockedPhrase.PhraseExistsInDB(phrase))
+                            {
+                                SendChatMessage(user + ", the phrase \"" + phrase + "\" is already blocked.");
+                                Log.Message("<" + channelName + "> " + user + " attempted to block a phrase, but it already exists --> " + phrase, true);
+                            }
+                            else
+                            {
+                                BlockedPhrase.BlockPhrase(phrase);
+                                SendChatMessage(user + " blocked the phrase [" + (BlockedPhrase.PhraseCountInDB() - 1) + "]: " + phrase);
+                                Log.Message("<" + channelName + "> " + user + " blocked a phrase: " + phrase, true);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        SendWhisper(user, "!block is only available to moderators");
+                        Log.Message(user + " attempted to block a phrase but is not a moderator --> " + phrase, true);
+                    }
+                }
+
+                // Delete a quote to the QUOTE table by searching the QuoteText column
+                if (message.StartsWith("!unblock "))
+                {
+                    // Parse the quote text data
+                    string phrase = message.Substring("!unblock ".Length);
+
+                    // If the user is a moderator, add the quote to the database, else do nothing
+                    if (chatData.UserIsModerator)
+                    {
+                        // Assume the command has no arguments
+                        bool hasArgs = false;
+                        // Split the command on space characters
+                        string[] args = message.Split(' ');
+                        // If there is at least one argument, continue, otherwise end if
+                        if (args.Length > 1) { hasArgs = true; }
+                        else { Log.Message("<" + channelName + "> " + user + " attempted to unblock a phrase, but there was not enough arguments.", true); }
+                        // Add quote to database if there were arguments and the quote exists
+                        if (hasArgs)
+                        {
+                            if (BlockedPhrase.PhraseExistsInDB(phrase))
+                            {
+                                BlockedPhrase.UnblockPhrase(phrase);
+                                SendChatMessage(user + " unblocked a phrase: " + phrase);
+                                Log.Message("<" + channelName + "> " + user + " unblocked a phrase: " + phrase, true);
+                            }
+                            else
+                            {
+                                SendChatMessage(user + ", that phrase is already unblocked.");
+                                Log.Message("<" + channelName + "> " + user + " attempted to block a phrase, but it does not exist --> " + phrase, true);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        SendWhisper(user, "!unblock is only available to moderators");
+                        Log.Message(user + " attempted to unblock a phrase but is not a moderator --> " + phrase, true);
+                    }
+                }
+                #endregion
+
                 #region QUOTE Commands
                 // Pull a random quote from the QUOTES table
-                if (message.StartsWith("!quote"))
+                Regex quoteRgx = new Regex(@"!quote [0-9]*");
+                if (message.Equals("!quote") || quoteRgx.IsMatch(message))
                 {
                     // Assume the command has no arguments, then split on space characters
                     string[] args = message.Split(' ');
@@ -189,7 +283,7 @@ namespace TwitchBot
                 }
 
                 // Add a quote to the QUOTE table
-                if (message.StartsWith("!addquote"))
+                if (message.StartsWith("!addquote "))
                 {
                     // Parse the quote text data
                     string quoteText = message.Substring("!addquote ".Length);
@@ -220,13 +314,13 @@ namespace TwitchBot
                         }
                     } else
                     {
-                        SendWhisper(user, "!addquote it only available to moderators");
+                        SendWhisper(user, "!addquote is only available to moderators");
                         Log.Message(user + " attempted to add a quote but is not a moderator --> " + quoteText, true);
                     }
                 }
 
                 // Delete a quote to the QUOTE table by searching the QuoteText column
-                if (message.StartsWith("!delquote"))
+                if (message.StartsWith("!delquote "))
                 {
                     // Parse the quote text data
                     string quoteText = message.Substring("!delquote ".Length);
@@ -258,12 +352,12 @@ namespace TwitchBot
                     }
                     else
                     {
-                        SendWhisper(user, "!addquote it only available to moderators");
+                        SendWhisper(user, "!delquote is only available to moderators");
                         Log.Message(user + " attempted to add a quote but is not a moderator --> " + quoteText, true);
                     }
                 }
                 #endregion
-
+                
                 #region STRAWPOLL Parser
                 if (message.Contains("strawpoll.me/"))
                 {
@@ -281,6 +375,7 @@ namespace TwitchBot
                 #region YOUTUBE Parser
                 if (message.Contains("youtube.com/") || message.Contains("youtu.be/"))
                 {
+                    Console.WriteLine("YouTube Link detected: " + message);
                     if (YouTubeParser.GetYouTubeVideoID(message) != null)
                     {
                         SendChatMessage(user + " pasted a YouTube video ➤ " + YouTubeParser.GetYouTubeInfo(message, YouTubeParser.IS_VIDEO));
@@ -316,7 +411,7 @@ namespace TwitchBot
                 // Phantoon guesses
                 if (message.Equals("!phantoon"))
                 {
-                    int[] rands = new int[3];
+                    int[] rands = new int[2];
                     string label = null;
                     int total = 0;
 
@@ -325,17 +420,17 @@ namespace TwitchBot
                     {
                         rands[i] = RNG.Next(1, 4);
                         total += rands[i];
-                        if (rands[i] == 1) { label = label + " SLOW"; }
+                        if (rands[i] == 1) { label = label + " FAST"; }
                         else if (rands[i] == 2) { label = label + " MID"; }
-                        else { label = label + " FAST"; }
+                        else { label = label + " SLOW"; }
                     }
 
                     // Send chat message
-                    if (total <= 3) { SendChatMessage("predicts " + label + ". THE RNG LORDS ARE WITH US PogChamp"); }
-                    else if (total > 3 && total <= 4) { SendChatMessage("predicts " + label + ". Praise Jesus BloodTrail"); }
-                    else if (total > 4 && total <= 6) { SendChatMessage("predicts " + label + ". Maybe this won't be a reset after all OMGScoots"); }
-                    else if (total > 6 && total <= 8) { SendChatMessage("predicts " + label + ". Phantoon please BibleThump"); }
-                    else if (total == 9) { SendChatMessage("predicts " + label + ". You motherfucker. RESET RESET RESET SwiftRage"); }
+                    if (total <= 2) { SendChatMessage("predicts " + label + ". THE RNG LORDS ARE WITH US PogChamp"); }
+                    else if (total > 2 && total <= 3) { SendChatMessage("predicts " + label + ". Praise Jesus BloodTrail"); }
+                    else if (total > 3 && total <= 4) { SendChatMessage("predicts " + label + ". Maybe this won't be a reset after all OMGScoots"); }
+                    else if (total > 5 && total <= 6) { SendChatMessage("predicts " + label + ". Phantoon please BibleThump"); }
+                    else if (total == 6) { SendChatMessage("predicts " + label + ". You motherfucker. RESET RESET RESET SwiftRage"); }
                 }
 
                 // Eyedoor guesses
@@ -366,6 +461,44 @@ namespace TwitchBot
                 {
                     SendChatMessageNoAction("!points");
                 }
+
+                // Commit sudoku
+                if (message.Equals("!sudoku"))
+                {
+                    if (!chatData.UserIsModerator)
+                    {
+                        SendChatMessageNoAction(".timeout " + user + " 1");
+                        SendChatMessage(user + " committed sudoku.");
+                    }
+                }
+
+                //if (message.Equals("!foosdaraid"))
+                //{
+                //    for (int i = 0; i < 5; i++)
+                //    {
+                //        SendChatMessage("Foosda Raid ( ͡° ͜ʖ ͡°)");
+                //    }
+                //}
+
+                //// Block thinking emoji
+                //if (message.Equals("🤔"))
+                //{
+                //    SendChatMessageNoAction(".timeout " + user + " 1");
+                //    SendWhisper(user, "Your messages have been purged from " + channelName + " for using the thinking emoji. Go sit in the corner.");
+                //    Log.Message(user + " has been timed out from " + channelName + " for using the thinking emoji. Go sit in the corner.", true);
+                //}
+
+                //// FAQ
+                //if ((message.Contains("What") || message.Contains("what")) && (message.Contains(" rbo") || message.Contains(" RBO") || message.Contains(" rbo ") || message.Contains(" RBO ")))
+                //{
+                //    SendChatMessage("RBO stand for Reverse Boss Order. It requires beating the four statue bosses in the following order: Ridley, Draygon, Phantoon, Kraid.");
+                //}
+
+                //if (message.StartsWith("I think") || message.StartsWith("i think"))
+                //{
+                //    SendChatMessage("Nobody care what you think, " + user);
+                //}
+
                 #endregion
 
             }
@@ -412,7 +545,7 @@ namespace TwitchBot
 
 
         /// <summary>
-        /// Show the uptime for the stream. Information is pulled from DecAPI.me API by Alex Thomassen
+        /// Show the uptime+ for the stream. Information is pulled from DecAPI.me API by Alex Thomassen
         /// </summary>
         /// <param name="channel">The channel to check</param>
         /// <param name="irc">IRC client</param>

@@ -23,18 +23,18 @@ namespace TwitchBot
         public const string BOTNAME = "nutbotty";
         const string OAUTH_TOKEN = "oauth:5f2nzeaav3vby8fqvgfowcd3cflvd4";
         const int RECONNECT_TIME = 5;
-        const string IRC_SERVER = "irc.twitch.tv";
-        const string WHISPER_SERVER = "192.16.64.212";
+        const string IRC_SERVER = "irc.chat.twitch.tv";
+        const string WHISPER_SERVER = "irc.chat.twitch.tv";
         const int PORT = 6667;
         public static List<Channel> channels;
-        public static List<Quote> quotes;
         #endregion
 
         #region TwitchChatBot Entry Point
         static void Main(string[] args)
         {
             // Set up the chat server and whisper server, using the authentication fields
-            TwitchChatConnection chatConnection = new TwitchChatConnection(new IrcClient(IRC_SERVER, PORT, RECONNECT_TIME, BOTNAME, OAUTH_TOKEN), false);
+            // TwitchChatConnection oldServerConnection = new TwitchChatConnection(new IrcClient(IRC_SERVER, PORT, RECONNECT_TIME, BOTNAME, OAUTH_TOKEN), false);
+            TwitchChatConnection ircServerConnection = new TwitchChatConnection(new IrcClient(IRC_SERVER, PORT, RECONNECT_TIME, BOTNAME, OAUTH_TOKEN), false);
             TwitchChatConnection whisperConnection = new TwitchChatConnection(new IrcClient(WHISPER_SERVER, PORT, RECONNECT_TIME, BOTNAME, OAUTH_TOKEN), true);
 
             // Create a list of channels from all the rows in the CHANNELS table, as well as the bot itself,
@@ -44,12 +44,14 @@ namespace TwitchBot
             channels.AddRange(Database.GetChannelList());
             foreach (Channel channel in channels)
             {
-                new TwitchChatRoom(chatConnection, whisperConnection, channel);
+                // new TwitchChatRoom(oldServerConnection, whisperConnection, channel);
+                new TwitchChatRoom(ircServerConnection, ircServerConnection, channel);
             }
 
             // Start the pulling in data from the chat server and whisper server streams
             // (if you want to added a second, third, fourth etc. bot, double up on these threads)
-            new Thread(new ThreadStart(chatConnection.Run)).Start();
+            // new Thread(new ThreadStart(oldServerConnection.Run)).Start();
+            new Thread(new ThreadStart(ircServerConnection.Run)).Start();
             new Thread(new ThreadStart(whisperConnection.Run)).Start();
 
         } 

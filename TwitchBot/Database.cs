@@ -12,8 +12,8 @@ namespace TwitchBot
     {
         // Connection string for the database file (Right-click database file in Server Explorer --> Connection --> Connection String)
         private const string connectionString = @"Data Source=(LocalDB)\MSSQLLocalDB;AttachDbFilename=
-                        D:\Cloud\Dropbox\Projects\Microsoft Visual Studio\TwitchBot\TwitchBot\TwitchBot\NutbottyDB.mdf;
-                        Integrated Security=True";
+                    D:\Cloud\Dropbox\Projects\Microsoft Visual Studio\TwitchBot\TwitchBot\TwitchBot\NutbottyDB.mdf;
+                    Integrated Security = True";
 
         public static string ConnectionString
         {

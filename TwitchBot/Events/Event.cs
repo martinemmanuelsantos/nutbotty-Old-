@@ -17,13 +17,13 @@ namespace TwitchBot.Events
             // PING
             Regex pingRgx = new Regex(@"PING.*$");
 
-            // PRIVMSG (for regular chat messages)
+            // PRIVMSG (for regular chat messages) (use #[.0-9a-fA-F]{6} for hexadecimal strings)
             Regex chatRgx =
-                new Regex(@"@color=#[.0-9a-fA-F]{6};display-name=.*;emotes=.*;subscriber=[0-1];turbo=[0-1];user-id=[0-9]*;user-type=.* :.+!.+@.+\.tmi\.twitch\.tv PRIVMSG #.+ :.*$");
+                new Regex(@"@badges=.*;color=.*;display-name=.*;emotes=.*;id=.*;mod=[0-1];room-id=[0-9]*(;sent-ts=[0-9]*)?;subscriber=[0-1];tmi-sent-ts=.*;turbo=[0-1];user-id=[0-9]*;user-type=.* :.+!.+@.+\.tmi\.twitch\.tv PRIVMSG #.+ :.*$");
 
-            // WHISPER (for whisper messages)
+            // WHISPER (for whisper messages) (use #[.0-9a-fA-F]{6} for hexadecimal strings)
             Regex whisperRgx =
-                new Regex(@"@color=#[.0-9a-fA-F]{6};display-name=.*;emotes=.*;message-id=[0-9]*;thread-id=.*;turbo=[0-1];user-id=[0-9]*;user-type=.* :.+!.+@.+\.tmi\.twitch\.tv WHISPER .+ :.*$");
+                new Regex(@"@badges=.*;color=.*;display-name=.*;emotes=.*;message-id=[0-9]*;thread-id=.*;turbo=[0-1];user-id=[0-9]*;user-type=.* :.+!.+@.+\.tmi\.twitch\.tv WHISPER .+ :.*$");
 
             // Host event
             Regex hostRgx = new Regex(@"jtv!jtv@jtv\.tmi\.twitch\.tv PRIVMSG .+ :.+ is now hosting you\.$");
@@ -44,19 +44,20 @@ namespace TwitchBot.Events
         /// <returns></returns>
         internal static string ParseMessage(string ircString)
         {
-            string message = ircString;                                                                         // Begin with the IRC message
-            int startIndex = message.IndexOf(' ');
-            message = message.Substring(startIndex);
-            startIndex = message.IndexOf('#');
-            message = message.Substring(startIndex);
-            startIndex = message.IndexOf(':');
-            message = message.Substring(startIndex + 1);                                                        // Remove everything at and before the last ':'
-            // If the chat message is an ACTION message, remove "ACTION " text
-            if (message.StartsWith("\x01" + "ACTION ")) {
-                message = Regex.Replace(message, "\x01", "", RegexOptions.Compiled);
-                message = message.Remove(0, "ACTION ".Length);
+            // Regex for chat message or whisper events
+            Regex rgxMessage = new Regex(@".+ (?:PRIVMSG|WHISPER) #.+ :(.+)");
+            Match messageMatch = rgxMessage.Match(ircString);
+
+            if (messageMatch.Success) {
+                string message = messageMatch.Groups[1].Value;
+                if (message.StartsWith("\x01" + "ACTION "))
+                {
+                    message = Regex.Replace(message, "\x01", "", RegexOptions.Compiled);
+                    message = message.Remove(0, "ACTION ".Length);
+                }
+                return message;
             }
-            return message;
+            else { return ""; }
         }
 
         /// <summary>
@@ -110,13 +111,23 @@ namespace TwitchBot.Events
         }
 
         /// <summary>
+        /// Parse the user's badges
+        /// </summary>
+        /// <param name="metatags">Complete list of metatags</param>
+        /// <returns></returns>
+        internal string ParseUserBadges(List<string> metatags)
+        {
+            return FindMetatagData(metatags, "@badges=");
+        }
+
+        /// <summary>
         /// Parse the user's color as a hexadecimal string
         /// </summary>
         /// <param name="metatags">Complete list of metatags</param>
         /// <returns></returns>
         internal string ParseUserColor(List<string> metatags)
         {
-            return FindMetatagData(metatags, "@color=");
+            return FindMetatagData(metatags, "color=");
         }
 
         /// <summary>
@@ -137,6 +148,28 @@ namespace TwitchBot.Events
         internal string ParseEmotes(List<string> metatags)
         {
             return FindMetatagData(metatags, "emotes=");
+        }
+
+        /// <summary>
+        /// Parse the moderator status of the user
+        /// </summary>
+        /// <param name="metatags">Complete list of metatags</param>
+        /// <returns></returns>
+        internal bool ParseHasMod(List<string> metatags)
+        {
+            string turboData = FindMetatagData(metatags, "mod=");
+            if (turboData.Equals("1")) { return true; }
+            else return false;
+        }
+
+        /// <summary>
+        /// Parse the room ID
+        /// </summary>
+        /// <param name="metatags">Complete list of metatags</param>
+        /// <returns></returns>
+        internal string ParseRoomId(List<string> metatags)
+        {
+            return FindMetatagData(metatags, "room-id=");
         }
 
         /// <summary>

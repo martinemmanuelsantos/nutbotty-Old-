@@ -147,7 +147,7 @@ namespace TwitchBot
         /// <param name="message">Chat message</param>
         public void SendChatMessageNoAction(string channel, string message)
         {
-            SendIrcString(":" + username + "!" + username + "@" + username + ".tmi.twitch.tv PRIVMSG #" + channel + " : " + message);
+            SendIrcString(":" + username + "!" + username + "@" + username + ".tmi.twitch.tv PRIVMSG #" + channel + " :" + message);
             outputStream.Flush();
             Log.Message(message, false);
         }

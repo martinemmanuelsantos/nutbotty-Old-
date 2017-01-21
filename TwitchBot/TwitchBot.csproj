@@ -68,6 +68,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Entities\BlockedPhrase.cs" />
     <Compile Include="Entities\ChatCommand.cs" />
     <Compile Include="Entities\Quote.cs" />
     <Compile Include="Events\HostEvent.cs" />

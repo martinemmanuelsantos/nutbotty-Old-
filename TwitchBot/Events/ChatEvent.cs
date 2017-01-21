@@ -14,15 +14,17 @@ namespace TwitchBot.Events
     {
         #region Member Variables
         private string user;                        // Username of the user that created the message
-        private string channelName;                     // Channel that the message was received from 
+        private string channelName;                 // Channel that the message was received from 
         private string chatMessage;                 // Twitch chat portion of message
 
+        private string userBadges;                  // Badges of the use
         private string userColor;                   // Color of the user as a hexadecimal
         private string displayname;                 // Display name of the user including capitalization
         private string emotes;                      // Emotes that used in the message
         private bool userIsSubscriber;              // Is the user a subscriber to this channel?
         private bool userHasTurbo;                  // Does the user have Twitch turbo?
         private long userId;                        // User ID number of the user
+        private string roomId;                      // Room ID number of the message
         private string userType;                    // Type of the user (mod, global-mod, admin, staff)
         private bool userIsBroadcaster;             // Is the user the broadcaster in this channel?
         private bool userIsModerator;               // Is the user a moderator in this chhanel (or higher)?
@@ -38,15 +40,17 @@ namespace TwitchBot.Events
 
             // Set metatag attributes of chat message
             List<string> metatags = GetMetatags(ircString);
+            userBadges = ParseUserBadges(metatags);
             userColor = ParseUserColor(metatags);
             displayname = ParseDisplayName(metatags);
             emotes = ParseEmotes(metatags);
             userIsSubscriber = ParseIsSubscriber(metatags);
             userHasTurbo = ParseHasTurbo(metatags);
             userId = ParseUserId(metatags);
+            roomId = ParseRoomId(metatags);
             userType = ParseUserType(metatags);
             userIsBroadcaster = ParseIsBroadcaster(metatags);
-            userIsModerator = ParseIsModerator(userType);
+            userIsModerator = ParseIsModerator(userBadges, metatags);
         }
         #endregion
 
@@ -98,14 +102,11 @@ namespace TwitchBot.Events
         /// </summary>
         /// <param name="metatags">Complete list of metatags</param>
         /// <returns></returns>
-        internal bool ParseIsModerator(string userType)
+        internal bool ParseIsModerator(string userBadges, List<string> metatags)
         {
-            if (this.userType.Equals("mod") ||
-                this.userType.Equals("global-mod") ||
-                this.userType.Equals("admin") ||
-                this.userType.Equals("staff") ||
-                this.UserIsBroadcaster)
-            { return true; }
+            string moderatorData = FindMetatagData(metatags, "mod=");
+            if (moderatorData.Equals("1")) { return true; }
+            if (this.ParseUserBadges(metatags).Contains("broadcaster")) { return true; }
             else return false;
         }
 
